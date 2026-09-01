@@ -20,12 +20,13 @@ model Admin {
 }
 
 model User {
-  id        String        @id @default(cuid())
-  name      String?
-  email     String        @unique
-  image     String?
-  phone     String?
-  createdAt DateTime      @default(now())
+  id           String        @id @default(cuid())
+  name         String?
+  email        String        @unique
+  passwordHash String?
+  image        String?
+  phone        String?
+  createdAt    DateTime      @default(now())
   accounts  Account[]
   sessions  Session[]
   orders    Order[]

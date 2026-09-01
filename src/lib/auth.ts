@@ -13,6 +13,57 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy-google-client-secret',
     }),
     CredentialsProvider({
+      id: 'customer-credentials',
+      name: 'Customer Login',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email) return null
+        const cleanEmail = credentials.email.trim().toLowerCase()
+
+        // Check if demo login
+        if (cleanEmail === 'rahul.demo@gmail.com' && credentials.password === 'demo123') {
+          let demoUser = await prisma.user.findUnique({ where: { email: cleanEmail } })
+          if (!demoUser) {
+            demoUser = await prisma.user.create({
+              data: {
+                name: 'Rahul Sharma (Demo Customer)',
+                email: cleanEmail,
+                phone: '9876543210',
+              },
+            })
+          }
+          return {
+            id: demoUser.id,
+            name: demoUser.name,
+            email: demoUser.email,
+            role: 'customer',
+          } as any
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: cleanEmail },
+        })
+
+        if (!user) return null
+
+        if (user.passwordHash && credentials.password) {
+          const isValid = await bcrypt.compare(credentials.password, user.passwordHash)
+          if (!isValid) return null
+        }
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          role: 'customer',
+        } as any
+      },
+    }),
+    CredentialsProvider({
       id: 'admin-credentials',
       name: 'Admin Login',
       credentials: {
@@ -43,6 +94,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role || 'customer'
         token.adminRole = user.adminRole
+        token.sub = user.id
       }
       if (account?.provider === 'google') {
         token.role = 'customer'
@@ -51,7 +103,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }: any) {
       if (session.user) {
-        session.user.role = token.role
+        session.user.role = token.role || 'customer'
         session.user.adminRole = token.adminRole
         session.user.id = token.sub
       }

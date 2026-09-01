@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ShoppingCart, Star, AlertCircle, CheckCircle, XCircle, FileText } from 'lucide-react'
+import { ShoppingCart, Star, AlertCircle, CheckCircle, XCircle, FileText, Plus, Minus, Zap } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
 
@@ -28,39 +28,38 @@ interface Medicine {
 
 function getStockInfo(batches: { currentQuantity: number; expiryDate: Date }[]) {
   const now = new Date()
-  const validBatches = batches.filter((b) => b.expiryDate > now)
-  const totalUnits = validBatches.reduce((a, b) => a + b.currentQuantity, 0)
-  return totalUnits
+  const validBatches = batches.filter((b) => new Date(b.expiryDate) > now)
+  return validBatches.reduce((a, b) => a + b.currentQuantity, 0)
 }
 
 function getAvgRating(reviews: { rating: number }[]) {
-  if (!reviews.length) return 0
+  if (!reviews || !reviews.length) return 4.5
   return reviews.reduce((a, r) => a + r.rating, 0) / reviews.length
 }
 
 export function MedicineCard({ medicine, index = 0 }: { medicine: Medicine; index?: number }) {
-  const addToCart = useCartStore((s) => s.addItem)
-  const totalUnits = getStockInfo(medicine.batches)
-  const avgRating = getAvgRating(medicine.reviews)
+  const { items, addItem, updateQuantity } = useCartStore()
+
+  const totalUnits = getStockInfo(medicine.batches || [])
+  const avgRating = getAvgRating(medicine.reviews || [])
   const isOutOfStock = totalUnits === 0
   const isLowStock = totalUnits > 0 && totalUnits < 10
 
-  const scheduleColor: Record<string, string> = {
-    OTC: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    G: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    H: 'bg-orange-50 text-orange-700 border-orange-200',
-    H1: 'bg-red-50 text-red-700 border-red-200',
-    X: 'bg-red-50 text-red-700 border-red-200',
-  }
+  // Check if item is already in cart
+  const cartItem = items.find((i) => i.id === medicine.id && i.quantityType === 'full_pack')
+  const cartQuantity = cartItem ? cartItem.quantity : 0
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddDirect = (e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+
     if (isOutOfStock) return
     if (medicine.drugSchedule === 'X') {
-      toast.error('This medicine requires in-person visit with prescription')
+      toast.error('Schedule X narcotic: In-person visit required!')
       return
     }
-    addToCart({
+
+    addItem({
       id: medicine.id,
       name: medicine.name,
       brand: medicine.brand || '',
@@ -73,134 +72,183 @@ export function MedicineCard({ medicine, index = 0 }: { medicine: Medicine; inde
       quantityType: 'full_pack',
       imageUrl: medicine.imageUrl,
     })
-    toast.success(`${medicine.name} added to cart!`, {
-      icon: '🛒',
-    })
+    toast.success(`${medicine.name} added! 🛒`)
   }
+
+  const handleIncrement = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    updateQuantity(medicine.id, cartQuantity + 1)
+  }
+
+  const handleDecrement = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    updateQuantity(medicine.id, cartQuantity - 1)
+  }
+
+  const savings = Math.max(0, medicine.mrp - medicine.sellingPrice)
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: index * 0.05 }}
-      className="glow-card glow-card-ambient"
+      transition={{ duration: 0.25, delay: index * 0.03 }}
+      className="glow-card glow-card-ambient h-full"
     >
-      <Link href={`/medicines/${medicine.id}`} className="block">
-        <div className="relative bg-white rounded-2xl border border-gray-100 overflow-hidden hover:border-gray-200 hover:shadow-lg transition-all duration-300 h-full">
-          {/* Discount badge */}
-          {medicine.discountPercent > 0 && (
-            <div className="absolute top-2 left-2 z-10 bg-teal-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              {medicine.discountPercent}% OFF
-            </div>
-          )}
+      <Link href={`/medicines/${medicine.id}`} className="block h-full">
+        <div className="relative bg-white rounded-3xl border border-gray-100/90 overflow-hidden hover:border-teal-300/80 hover:shadow-lg transition-all duration-300 flex flex-col justify-between h-full group p-3">
+          {/* Top Row: Delivery Time & Discount Badge */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-600 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+              <Zap className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
+              15 MINS
+            </span>
+
+            {medicine.discountPercent > 0 ? (
+              <span className="bg-teal-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full shadow-2xs">
+                {medicine.discountPercent}% OFF
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                BEST PRICE
+              </span>
+            )}
+          </div>
 
           {/* Out of stock overlay */}
           {isOutOfStock && (
-            <div className="absolute inset-0 bg-white/60 z-10 flex items-center justify-center rounded-2xl">
-              <span className="bg-white border border-red-200 text-red-600 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-3xs z-20 flex items-center justify-center rounded-3xl p-4">
+              <span className="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
                 Out of Stock
               </span>
             </div>
           )}
 
-          {/* Image area */}
-          <div className="h-36 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center relative">
+          {/* Image Canvas */}
+          <div className="h-32 bg-gradient-to-b from-gray-50/80 to-white rounded-2xl flex items-center justify-center relative overflow-hidden mb-2 group-hover:scale-102 transition-transform">
             {medicine.imageUrl ? (
               <img
                 src={medicine.imageUrl}
                 alt={medicine.name}
-                className="h-full w-full object-contain p-4"
+                className="h-full w-full object-contain p-2"
               />
             ) : (
-              <div className="flex flex-col items-center gap-1 opacity-30">
-                <span className="text-4xl">💊</span>
+              <div className="text-center">
+                <span className="text-4xl block mb-1">💊</span>
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  {medicine.unitType}
+                </span>
               </div>
             )}
-            {/* Category label */}
+
+            {/* Category tag */}
             {medicine.category && (
               <span
-                className="absolute bottom-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium text-white"
-                style={{ backgroundColor: medicine.category.color || '#6b7280' }}
+                className="absolute bottom-1.5 left-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md text-white shadow-3xs"
+                style={{ backgroundColor: medicine.category.color || '#0d9488' }}
               >
                 {medicine.category.name}
               </span>
             )}
           </div>
 
-          {/* Content */}
-          <div className="p-3 flex flex-col gap-2">
-            {/* Name */}
-            <div>
-              <h3 className="font-poppins font-semibold text-gray-900 text-sm leading-tight line-clamp-2">
-                {medicine.name}
-              </h3>
-              {medicine.genericName && (
-                <p className="text-gray-400 text-xs mt-0.5 truncate">{medicine.genericName}</p>
-              )}
-              {medicine.brand && (
-                <p className="text-gray-500 text-xs">{medicine.brand}</p>
-              )}
-            </div>
+          {/* Title & Clinical Info */}
+          <div className="space-y-1.5 flex-1">
+            <h3 className="font-poppins font-bold text-gray-900 text-xs sm:text-sm leading-tight line-clamp-2 group-hover:text-teal-700 transition-colors">
+              {medicine.name}
+            </h3>
 
-            {/* Rating */}
-            {medicine.reviews.length > 0 && (
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                <span className="text-xs font-medium text-gray-700">{avgRating.toFixed(1)}</span>
-                <span className="text-xs text-gray-400">({medicine.reviews.length})</span>
-              </div>
-            )}
+            {medicine.genericName ? (
+              <p className="text-gray-400 text-[10px] truncate">{medicine.genericName}</p>
+            ) : medicine.brand ? (
+              <p className="text-gray-400 text-[10px]">{medicine.brand}</p>
+            ) : null}
 
-            {/* Price */}
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-poppins font-bold text-gray-900 text-base">
-                ₹{medicine.sellingPrice.toFixed(0)}
-              </span>
-              {medicine.discountPercent > 0 && (
-                <span className="text-gray-400 text-xs line-through">₹{medicine.mrp.toFixed(0)}</span>
-              )}
-            </div>
+            {/* Unit count & Loose indicator */}
+            <p className="text-[10px] text-gray-500 font-medium">
+              {medicine.unitsPerPack} {medicine.unitType === 'strip' ? 'Tablets' : medicine.unitType} / pack
+            </p>
 
-            {/* Stock status */}
+            {/* Rating Stars */}
             <div className="flex items-center gap-1">
-              {isOutOfStock ? (
-                <><XCircle className="w-3.5 h-3.5 text-red-500" /><span className="text-xs text-red-600 font-medium">Out of Stock</span></>
-              ) : isLowStock ? (
-                <><AlertCircle className="w-3.5 h-3.5 text-amber-500" /><span className="text-xs text-amber-600 font-medium">Only {totalUnits} left</span></>
+              <div className="flex text-amber-400">
+                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+              </div>
+              <span className="text-[10px] font-bold text-gray-800">{avgRating.toFixed(1)}</span>
+            </div>
+
+            {/* Schedule Type */}
+            <div>
+              {medicine.drugSchedule === 'OTC' ? (
+                <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md inline-block">
+                  OTC (No Rx)
+                </span>
+              ) : medicine.drugSchedule === 'X' ? (
+                <span className="text-[9px] text-red-700 font-bold bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-md inline-block">
+                  Schedule X
+                </span>
               ) : (
-                <><CheckCircle className="w-3.5 h-3.5 text-emerald-500 pulse-green" /><span className="text-xs text-emerald-600 font-medium">In Stock</span></>
+                <span className="text-[9px] text-orange-700 font-bold bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded-md inline-flex items-center gap-0.5">
+                  <FileText className="w-2.5 h-2.5" /> Rx Required
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Price & Action Row */}
+          <div className="pt-2 border-t border-gray-100/80 mt-2 flex items-center justify-between gap-2">
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="font-poppins font-extrabold text-gray-900 text-sm sm:text-base">
+                  ₹{medicine.sellingPrice.toFixed(0)}
+                </span>
+                {savings > 0 && (
+                  <span className="text-gray-400 text-[10px] line-through">₹{medicine.mrp.toFixed(0)}</span>
+                )}
+              </div>
+              {savings > 0 && (
+                <span className="text-[9px] text-emerald-600 font-bold block">Save ₹{savings.toFixed(0)}</span>
               )}
             </div>
 
-            {/* Schedule badge */}
-            {medicine.drugSchedule !== 'OTC' && (
-              <span className={`text-xs px-2 py-0.5 rounded-full border font-medium w-fit flex items-center gap-1 ${scheduleColor[medicine.drugSchedule] || scheduleColor.H}`}>
-                <FileText className="w-3 h-3" />
-                {medicine.drugSchedule === 'X' ? 'Visit Shop Only' : 'Prescription Required'}
-              </span>
-            )}
-
-            {/* Add to cart button */}
+            {/* Interactive Add / Counter Button */}
             {medicine.drugSchedule === 'X' ? (
               <a
                 href="tel:7827558443"
                 onClick={(e) => e.stopPropagation()}
-                className="w-full mt-auto bg-red-50 border border-red-200 text-red-700 text-xs font-semibold py-2 rounded-xl text-center hover:bg-red-100 transition-colors"
+                className="bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold px-2 py-1.5 rounded-xl hover:bg-red-100"
               >
-                📞 Call to Order
+                In-Shop
               </a>
+            ) : cartQuantity > 0 ? (
+              <div className="flex items-center gap-1.5 bg-teal-600 text-white rounded-xl px-1.5 py-1 shadow-xs">
+                <button
+                  onClick={handleDecrement}
+                  className="w-5 h-5 rounded-lg bg-teal-700 flex items-center justify-center hover:bg-teal-800 cursor-pointer"
+                >
+                  <Minus className="w-2.5 h-2.5" />
+                </button>
+                <span className="text-xs font-bold w-4 text-center">{cartQuantity}</span>
+                <button
+                  onClick={handleIncrement}
+                  className="w-5 h-5 rounded-lg bg-teal-700 flex items-center justify-center hover:bg-teal-800 cursor-pointer"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                </button>
+              </div>
             ) : (
               <button
-                onClick={handleAddToCart}
+                onClick={handleAddDirect}
                 disabled={isOutOfStock}
-                className={`w-full mt-auto flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-2xs active:scale-95 cursor-pointer ${
                   isOutOfStock
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-teal-600 text-white hover:bg-teal-700 shadow-sm hover:shadow-md active:scale-95'
+                    : 'bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 hover:border-teal-600'
                 }`}
               >
-                <ShoppingCart className="w-4 h-4" />
-                {medicine.requiresPrescription ? 'Add + Upload Rx' : 'Add to Cart'}
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add</span>
               </button>
             )}
           </div>
