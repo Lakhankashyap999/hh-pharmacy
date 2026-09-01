@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           Int              @id @default(autoincrement())
+  name         String
+  email        String           @unique
+  passwordHash String
+  phone        String?
+  role         String           @default("staff") // owner | staff
+  createdAt    DateTime         @default(now())
+  receipts     BillingReceipt[]
+  stockLogs    StockLog[]
+}
+
+model User {
+  id        String        @id @default(cuid())
+  name      String?
+  email     String        @unique
+  image     String?
+  phone     String?
+  createdAt DateTime      @default(now())
+  accounts  Account[]
+  sessions  Session[]
+  orders    Order[]
+  reviews   Review[]
+  wishlist  Wishlist[]
+  addresses UserAddress[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model UserAddress {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  label       String   @default("Home") // Home | Office | Other
+  fullAddress String
+  landmark    String?
+  pincode     String?
+  isDefault   Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]
+}
+
+model Category {
+  id         Int        @id @default(autoincrement())
+  name       String
+  nameHindi  String?
+  icon       String?    // emoji or icon name
+  color      String?    // for category badge
+  sortOrder  Int        @default(0)
+  medicines  Medicine[]
+}
+
+model Medicine {
+  id                   Int               @id @default(autoincrement())
+  name                 String
+  nameHindi            String?
+  genericName          String?
+  brand                String?
+  manufacturer         String?
+  description          String?
+  usageInstructions    String?
+  sideEffects          String?
+  mrp                  Float
+  sellingPrice         Float
+  discountPercent      Float             @default(0)
+  unitType             String            @default("strip") // strip | bottle | tube | syrup | sachet | injection
+  unitsPerPack         Int               @default(10)
+  drugSchedule         String            @default("OTC") // OTC | G | H | H1 | X
+  isNarcotic           Boolean           @default(false)
+  requiresPrescription Boolean           @default(false)
+  maxQtyPerOrder       Int               @default(10)
+  imageUrl             String?
+  categoryId           Int?
+  isActive             Boolean           @default(true)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  category             Category?         @relation(fields: [categoryId], references: [id])
+  batches              MedicineBatch[]
+  location             MedicineLocation?
+  orderItems           OrderItem[]
+  reviews              Review[]
+  wishlist             Wishlist[]
+  stockLogs            StockLog[]
+  drugRegister         DrugRegister[]
+  expiryAlerts         ExpiryAlert[]
+}
+
+model MedicineBatch {
+  id              Int              @id @default(autoincrement())
+  medicineId      Int
+  batchNumber     String
+  expiryDate      DateTime
+  totalQuantity   Int
+  currentQuantity Int
+  purchasePrice   Float?
+  receivedDate    DateTime         @default(now())
+  billingReceiptId Int?
+  medicine        Medicine         @relation(fields: [medicineId], references: [id])
+  billingReceipt  BillingReceipt?  @relation(fields: [billingReceiptId], references: [id])
+  orderItems      OrderItem[]
+  stockLogs       StockLog[]
+  expiryAlerts    ExpiryAlert[]
+  drugRegister    DrugRegister[]
+}
+
+model MedicineLocation {
+  id          Int      @id @default(autoincrement())
+  medicineId  Int      @unique
+  shelfLabel  String?  // Shelf A, Shelf B
+  rackNumber  String?  // Rack 1, Rack 2
+  section     String?  // Top | Middle | Bottom
+  coverLabel  String?  // Blue Cover, Red Label
+  description String?  // Near counter, back wall
+  medicine    Medicine @relation(fields: [medicineId], references: [id])
+}
+
+model Order {
+  id                    Int          @id @default(autoincrement())
+  orderNumber           String       @unique
+  userId                String?
+  addressId             Int?
+  customerName          String
+  customerPhone         String
+  deliveryAddress       String?
+  deliveryType          String       @default("pickup") // pickup | delivery
+  status                String       @default("pending") // pending | confirmed | preparing | out_for_delivery | delivered | cancelled
+  totalAmount           Float
+  discountAmount        Float        @default(0)
+  paymentMode           String       @default("COD") // COD | UPI
+  prescriptionImageUrl  String?
+  prescriptionStatus    String       @default("not_required") // not_required | pending | approved | rejected
+  rejectionReason       String?
+  notes                 String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  user                  User?        @relation(fields: [userId], references: [id])
+  address               UserAddress? @relation(fields: [addressId], references: [id])
+  items                 OrderItem[]
+  drugRegister          DrugRegister[]
+}
+
+model OrderItem {
+  id             Int           @id @default(autoincrement())
+  orderId        Int
+  medicineId     Int
+  batchId        Int?
+  quantity       Int
+  quantityType   String        @default("full_pack") // full_pack | loose_units
+  looseUnitCount Int?
+  unitPrice      Float
+  totalPrice     Float
+  order          Order         @relation(fields: [orderId], references: [id])
+  medicine       Medicine      @relation(fields: [medicineId], references: [id])
+  batch          MedicineBatch? @relation(fields: [batchId], references: [id])
+}
+
+model Review {
+  id                 Int      @id @default(autoincrement())
+  userId             String
+  medicineId         Int?
+  rating             Int      // 1-5
+  title              String?
+  comment            String?
+  photos             String?  // JSON array of URLs
+  isVerifiedPurchase Boolean  @default(false)
+  status             String   @default("pending") // pending | approved | rejected
+  helpfulCount       Int      @default(0)
+  adminReply         String?
+  adminReplyDate     DateTime?
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id])
+  medicine           Medicine? @relation(fields: [medicineId], references: [id])
+}
+
+model Wishlist {
+  id         Int      @id @default(autoincrement())
+  userId     String
+  medicineId Int
+  addedAt    DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+
+  @@unique([userId, medicineId])
+}
+
+model DrugRegister {
+  id                    Int           @id @default(autoincrement())
+  medicineId            Int
+  batchId               Int?
+  orderId               Int?
+  saleDate              DateTime      @default(now())
+  medicineName          String
+  batchNumber           String?
+  quantitySold          Int
+  customerName          String
+  customerAddress       String?
+  doctorName            String?
+  doctorRegNumber       String?
+  prescriptionDate      DateTime?
+  prescriptionImageUrl  String?
+  soldBy                String?
+  remarks               String?
+  medicine              Medicine      @relation(fields: [medicineId], references: [id])
+  batch                 MedicineBatch? @relation(fields: [batchId], references: [id])
+  order                 Order?        @relation(fields: [orderId], references: [id])
+}
+
+model BillingReceipt {
+  id            Int             @id @default(autoincrement())
+  imageUrl      String
+  rawOcrText    String?
+  extractedData String?         // JSON string
+  status        String          @default("uploaded") // uploaded | processing | processed | failed
+  uploadedAt    DateTime        @default(now())
+  processedAt   DateTime?
+  uploadedById  Int?
+  uploadedBy    Admin?          @relation(fields: [uploadedById], references: [id])
+  batches       MedicineBatch[]
+}
+
+model StockLog {
+  id             Int            @id @default(autoincrement())
+  medicineId     Int
+  batchId        Int?
+  action         String         // sale | restock | expired_removed | adjustment | damaged
+  quantityChange Int
+  quantityBefore Int
+  quantityAfter  Int
+  reference      String?        // Order #123
+  createdAt      DateTime       @default(now())
+  performedById  Int?
+  medicine       Medicine       @relation(fields: [medicineId], references: [id])
+  batch          MedicineBatch? @relation(fields: [batchId], references: [id])
+  performedBy    Admin?         @relation(fields: [performedById], references: [id])
+}
+
+model ExpiryAlert {
+  id              Int           @id @default(autoincrement())
+  batchId         Int
+  medicineId      Int
+  expiryDate      DateTime
+  daysUntilExpiry Int
+  alertStatus     String        // upcoming | critical | expired
+  isAcknowledged  Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  batch           MedicineBatch @relation(fields: [batchId], references: [id])
+  medicine        Medicine      @relation(fields: [medicineId], references: [id])
+}

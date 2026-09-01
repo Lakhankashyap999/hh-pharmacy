@@ -1,0 +1,639 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import {
+  ShoppingCart,
+  Star,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  ShieldCheck,
+  Truck,
+  ArrowLeft,
+  FileText,
+  Plus,
+  Minus,
+  MessageSquare,
+  Building,
+  Heart,
+} from 'lucide-react'
+import { useCartStore } from '@/store/cartStore'
+import toast from 'react-hot-toast'
+import { useSession, signIn } from 'next-auth/react'
+
+interface Medicine {
+  id: number
+  name: string
+  nameHindi?: string | null
+  genericName?: string | null
+  brand?: string | null
+  manufacturer?: string | null
+  description?: string | null
+  usageInstructions?: string | null
+  sideEffects?: string | null
+  mrp: number
+  sellingPrice: number
+  discountPercent: number
+  unitType: string
+  unitsPerPack: number
+  drugSchedule: string
+  isNarcotic: boolean
+  requiresPrescription: boolean
+  imageUrl?: string | null
+  category?: { id: number; name: string; color?: string | null } | null
+  batches: { id: number; batchNumber: string; currentQuantity: number; expiryDate: Date }[]
+  reviews: {
+    id: number
+    rating: number
+    title?: string | null
+    comment?: string | null
+    isVerifiedPurchase: boolean
+    createdAt: Date
+    adminReply?: string | null
+    user: { name?: string | null; image?: string | null }
+  }[]
+}
+
+export default function MedicineDetailClient({ medicine }: { medicine: Medicine }) {
+  const { data: session } = useSession()
+  const addToCart = useCartStore((s) => s.addItem)
+
+  // Mode: full pack vs loose unit
+  const isStripOrPack = medicine.unitType === 'strip' && medicine.unitsPerPack > 1
+  const [buyMode, setBuyMode] = useState<'full_pack' | 'loose_units'>('full_pack')
+  const [packQuantity, setPackQuantity] = useState(1)
+  const [looseUnits, setLooseUnits] = useState(4) // default 4 tablets
+  const [activeTab, setActiveTab] = useState<'about' | 'usage' | 'safety' | 'reviews'>('about')
+
+  // Review Form state
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [rating, setRating] = useState(5)
+  const [reviewTitle, setReviewTitle] = useState('')
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+
+  // Stock calculation
+  const totalUnits = medicine.batches.reduce((sum, b) => sum + b.currentQuantity, 0)
+  const fullPacksAvailable = Math.floor(totalUnits / medicine.unitsPerPack)
+  const looseUnitsAvailable = totalUnits % medicine.unitsPerPack
+  const isOutOfStock = totalUnits === 0
+
+  // Per tablet / unit calculation
+  const pricePerUnit = medicine.sellingPrice / medicine.unitsPerPack
+  const calculatedTotal =
+    buyMode === 'full_pack'
+      ? medicine.sellingPrice * packQuantity
+      : pricePerUnit * looseUnits
+
+  const avgRating =
+    medicine.reviews.length > 0
+      ? medicine.reviews.reduce((sum, r) => sum + r.rating, 0) / medicine.reviews.length
+      : 0
+
+  const handleAddToCart = () => {
+    if (isOutOfStock) return
+    if (medicine.drugSchedule === 'X') {
+      toast.error('Schedule X narcotic medicine: In-person visit with doctor prescription required!')
+      return
+    }
+
+    if (buyMode === 'full_pack') {
+      addToCart({
+        id: medicine.id,
+        name: medicine.name,
+        brand: medicine.brand || '',
+        price: medicine.sellingPrice,
+        mrp: medicine.mrp,
+        unitType: medicine.unitType,
+        unitsPerPack: medicine.unitsPerPack,
+        requiresPrescription: medicine.requiresPrescription,
+        quantity: packQuantity,
+        quantityType: 'full_pack',
+        imageUrl: medicine.imageUrl,
+      })
+      toast.success(`${packQuantity} strip(s) of ${medicine.name} added!`, { icon: '🛒' })
+    } else {
+      addToCart({
+        id: medicine.id,
+        name: medicine.name,
+        brand: medicine.brand || '',
+        price: medicine.sellingPrice,
+        mrp: medicine.mrp,
+        unitType: medicine.unitType,
+        unitsPerPack: medicine.unitsPerPack,
+        requiresPrescription: medicine.requiresPrescription,
+        quantity: 1,
+        quantityType: 'loose_units',
+        looseUnitCount: looseUnits,
+        imageUrl: medicine.imageUrl,
+      })
+      toast.success(`${looseUnits} loose tablet(s) of ${medicine.name} added!`, { icon: '💊' })
+    }
+  }
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!session) {
+      toast.error('Please sign in with Google to write a review')
+      signIn('google')
+      return
+    }
+    setSubmittingReview(true)
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: (session.user as any)?.id || session.user?.email || 'guest_user',
+          medicineId: medicine.id,
+          rating,
+          title: reviewTitle,
+          comment: reviewComment,
+        }),
+      })
+      if (res.ok) {
+        toast.success('Review submitted! It will appear once approved by admin.', { duration: 4000 })
+        setShowReviewModal(false)
+        setReviewTitle('')
+        setReviewComment('')
+      } else {
+        toast.error('Failed to submit review')
+      }
+    } catch {
+      toast.error('Something went wrong')
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+        <Link href="/medicines" className="flex items-center gap-1 hover:text-teal-600 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> All Medicines
+        </Link>
+        <span>/</span>
+        <span className="text-gray-900 font-medium truncate">{medicine.name}</span>
+      </div>
+
+      {/* Main product showcase */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+        {/* Left column: Image & Quick Badges (5 cols) */}
+        <div className="lg:col-span-5 space-y-4">
+          <div className="relative bg-white rounded-3xl border border-gray-100 p-8 shadow-sm flex items-center justify-center min-h-[340px] glow-card glow-card-ambient">
+            {medicine.discountPercent > 0 && (
+              <div className="absolute top-4 left-4 bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                {medicine.discountPercent}% DISCOUNT
+              </div>
+            )}
+            {medicine.category && (
+              <div
+                className="absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full text-white shadow-sm"
+                style={{ backgroundColor: medicine.category.color || '#0d9488' }}
+              >
+                {medicine.category.name}
+              </div>
+            )}
+            {medicine.imageUrl ? (
+              <img src={medicine.imageUrl} alt={medicine.name} className="max-h-64 object-contain" />
+            ) : (
+              <div className="text-center">
+                <span className="text-7xl block mb-2 opacity-40">💊</span>
+                <p className="text-xs text-gray-400 font-medium">{medicine.unitType.toUpperCase()}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Info Points */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+              <ShieldCheck className="w-5 h-5 text-teal-600 mx-auto mb-1" />
+              <p className="text-xs font-bold text-gray-800">100% Genuine</p>
+              <p className="text-[10px] text-gray-500">Certified Batch</p>
+            </div>
+            <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+              <Truck className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+              <p className="text-xs font-bold text-gray-800">Fast Delivery</p>
+              <p className="text-[10px] text-gray-500">Ghaziabad & nearby</p>
+            </div>
+            <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+              <Building className="w-5 h-5 text-purple-600 mx-auto mb-1" />
+              <p className="text-xs font-bold text-gray-800">Shop Pickup</p>
+              <p className="text-[10px] text-gray-500">Ghookna Mode</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right column: Medicine Info, Buying Logic & Actions (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          <div>
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              {medicine.drugSchedule === 'OTC' ? (
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                  ✅ Over The Counter (No Rx)
+                </span>
+              ) : medicine.drugSchedule === 'X' ? (
+                <span className="bg-red-100 text-red-800 border border-red-300 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  ⛔ Schedule X (In-Person Shop Only)
+                </span>
+              ) : (
+                <span className="bg-orange-50 text-orange-700 border border-orange-200 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5" /> Doctor Prescription Required
+                </span>
+              )}
+              {medicine.brand && (
+                <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                  Brand: {medicine.brand}
+                </span>
+              )}
+            </div>
+
+            <h1 className="font-poppins font-bold text-2xl md:text-3xl text-gray-900 leading-tight">
+              {medicine.name}
+            </h1>
+            {medicine.nameHindi && (
+              <p className="font-hindi text-base text-teal-700 font-medium mt-0.5">
+                {medicine.nameHindi}
+              </p>
+            )}
+            {medicine.genericName && (
+              <p className="text-sm text-gray-500 mt-1">
+                Composition: <span className="font-medium text-gray-700">{medicine.genericName}</span>
+              </p>
+            )}
+            {medicine.manufacturer && (
+              <p className="text-xs text-gray-400 mt-0.5">Manufactured by: {medicine.manufacturer}</p>
+            )}
+
+            {/* Rating Stars */}
+            <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span className="text-xs font-bold text-amber-800">
+                  {avgRating > 0 ? avgRating.toFixed(1) : 'New'}
+                </span>
+              </div>
+              <span className="text-xs text-gray-500">
+                ({medicine.reviews.length} customer review{medicine.reviews.length === 1 ? '' : 's'})
+              </span>
+            </div>
+          </div>
+
+          {/* Pricing Banner */}
+          <div className="bg-teal-50/70 border border-teal-100 rounded-2xl p-4 flex items-baseline justify-between flex-wrap gap-2">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="font-poppins font-bold text-3xl text-gray-900">
+                  ₹{medicine.sellingPrice.toFixed(0)}
+                </span>
+                {medicine.discountPercent > 0 && (
+                  <span className="text-gray-400 text-base line-through">₹{medicine.mrp.toFixed(0)}</span>
+                )}
+                <span className="text-xs text-teal-700 font-semibold bg-white px-2 py-0.5 rounded-md shadow-xs">
+                  {medicine.discountPercent}% OFF
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                Inclusive of all taxes. (Per {medicine.unitType} of {medicine.unitsPerPack} units ≈ ₹{pricePerUnit.toFixed(1)}/unit)
+              </p>
+            </div>
+
+            {/* Stock status tag */}
+            <div>
+              {isOutOfStock ? (
+                <div className="flex items-center gap-1.5 text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl font-semibold text-xs">
+                  <XCircle className="w-4 h-4" /> Out of Stock
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-semibold text-xs">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>
+                    In Stock ({fullPacksAvailable > 0 ? `${fullPacksAvailable} full strips` : ''}
+                    {looseUnitsAvailable > 0 ? ` + ${looseUnitsAvailable} loose tablets` : ''})
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Buying Selector (Full Pack vs Loose Tablet Solver) */}
+          {isStripOrPack && !isOutOfStock && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs space-y-3">
+              <p className="font-poppins font-semibold text-sm text-gray-900 flex items-center justify-between">
+                <span>Select Purchase Mode:</span>
+                <span className="text-xs text-teal-600 font-normal">Loose tablet flexibility available!</span>
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* Full Strip Button */}
+                <button
+                  onClick={() => setBuyMode('full_pack')}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    buyMode === 'full_pack'
+                      ? 'border-teal-500 bg-teal-50/50 shadow-xs ring-1 ring-teal-500'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <p className="font-semibold text-xs text-gray-900">
+                    Full Strip ({medicine.unitsPerPack} Tablets)
+                  </p>
+                  <p className="text-xs text-teal-700 font-bold mt-1">₹{medicine.sellingPrice}</p>
+                </button>
+
+                {/* Loose Units Button */}
+                <button
+                  onClick={() => setBuyMode('loose_units')}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    buyMode === 'loose_units'
+                      ? 'border-teal-500 bg-teal-50/50 shadow-xs ring-1 ring-teal-500'
+                      : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <p className="font-semibold text-xs text-gray-900">Loose Tablets (e.g. 4 goli)</p>
+                  <p className="text-xs text-teal-700 font-bold mt-1">
+                    ₹{pricePerUnit.toFixed(1)} / tablet
+                  </p>
+                </button>
+              </div>
+
+              {/* Quantity Counter */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <span className="text-xs text-gray-600 font-medium">
+                  {buyMode === 'full_pack' ? 'Number of Strips:' : 'Number of Tablets required:'}
+                </span>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (buyMode === 'full_pack') {
+                        setPackQuantity((q) => Math.max(1, q - 1))
+                      } else {
+                        setLooseUnits((u) => Math.max(1, u - 1))
+                      }
+                    }}
+                    className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+
+                  <span className="font-bold text-sm text-gray-900 w-8 text-center">
+                    {buyMode === 'full_pack' ? packQuantity : looseUnits}
+                  </span>
+
+                  <button
+                    onClick={() => {
+                      if (buyMode === 'full_pack') {
+                        setPackQuantity((q) => q + 1)
+                      } else {
+                        setLooseUnits((u) => Math.min(medicine.unitsPerPack, u + 1))
+                      }
+                    }}
+                    className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 pt-2">
+            {medicine.drugSchedule === 'X' ? (
+              <a
+                href="tel:7827558443"
+                className="flex-1 bg-red-600 text-white font-semibold py-3.5 px-6 rounded-2xl text-center hover:bg-red-700 transition-colors shadow-sm"
+              >
+                📞 Call Shop to Inquire (7827558443)
+              </a>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                disabled={isOutOfStock}
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-98 ${
+                  isOutOfStock
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-teal-600 text-white hover:bg-teal-700 hover:shadow-lg'
+                }`}
+              >
+                <ShoppingCart className="w-5 h-5" />
+                {isOutOfStock
+                  ? 'Out of Stock'
+                  : `Add to Cart • ₹${calculatedTotal.toFixed(0)}`}
+              </button>
+            )}
+
+            <button
+              onClick={() => toast.success('Added to your Wishlist!')}
+              className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <Heart className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs Section for detailed medical info */}
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-12">
+        <div className="flex border-b border-gray-100 overflow-x-auto">
+          {[
+            { id: 'about', label: '📖 Description' },
+            { id: 'usage', label: '💊 How to Use' },
+            { id: 'safety', label: '⚠️ Side Effects & Safety' },
+            { id: 'reviews', label: `⭐ Reviews (${medicine.reviews.length})` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-teal-600 text-teal-600 bg-teal-50/30'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="p-6 md:p-8">
+          {activeTab === 'about' && (
+            <div className="space-y-4 max-w-3xl">
+              <h3 className="font-poppins font-bold text-lg text-gray-900">About this medicine</h3>
+              <p className="text-gray-700 leading-relaxed">
+                {medicine.description || 'No detailed description provided.'}
+              </p>
+              {medicine.genericName && (
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  <p className="text-xs text-gray-500 font-semibold uppercase">Active Ingredients</p>
+                  <p className="text-sm text-gray-800 font-medium mt-0.5">{medicine.genericName}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'usage' && (
+            <div className="space-y-4 max-w-3xl">
+              <h3 className="font-poppins font-bold text-lg text-gray-900">How to use</h3>
+              <p className="text-gray-700 leading-relaxed">
+                {medicine.usageInstructions ||
+                  'Please follow the dosage prescribed by your registered medical practitioner or read the package label carefully.'}
+              </p>
+            </div>
+          )}
+
+          {activeTab === 'safety' && (
+            <div className="space-y-4 max-w-3xl">
+              <h3 className="font-poppins font-bold text-lg text-gray-900">Safety & Side Effects</h3>
+              <p className="text-gray-700 leading-relaxed">
+                {medicine.sideEffects ||
+                  'Consult your doctor if you experience any adverse reactions or unusual symptoms.'}
+              </p>
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
+                <strong>Schedule {medicine.drugSchedule} Notice:</strong> Keep out of reach of children. Store in a cool, dry place away from direct sunlight.
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h3 className="font-poppins font-bold text-lg text-gray-900">Customer Feedback</h3>
+                  <p className="text-xs text-gray-500">Real verified reviews from our pharmacy customers</p>
+                </div>
+                <button
+                  onClick={() => setShowReviewModal(true)}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center gap-1.5"
+                >
+                  <MessageSquare className="w-4 h-4" /> Write a Review
+                </button>
+              </div>
+
+              {medicine.reviews.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {medicine.reviews.map((rev) => (
+                    <div key={rev.id} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 font-bold text-xs flex items-center justify-center">
+                            {rev.user.name?.[0] || 'C'}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-gray-900">{rev.user.name || 'Customer'}</p>
+                            <div className="flex text-amber-400">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200'}`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {rev.isVerifiedPurchase && (
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                            ✅ Verified Buyer
+                          </span>
+                        )}
+                      </div>
+                      {rev.title && <p className="text-xs font-bold text-gray-800">{rev.title}</p>}
+                      {rev.comment && <p className="text-xs text-gray-600 leading-relaxed">{rev.comment}</p>}
+                      {rev.adminReply && (
+                        <div className="mt-2 p-2 bg-teal-50 border-l-2 border-teal-600 rounded-r-lg text-xs text-teal-900">
+                          <strong>H&H Pharmacy Reply:</strong> {rev.adminReply}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <p className="text-sm">No reviews yet for this medicine.</p>
+                  <p className="text-xs mt-1">Be the first to share your review!</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4"
+          >
+            <h3 className="font-poppins font-bold text-lg text-gray-900">Write a Review for {medicine.name}</h3>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Your Rating</label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="p-1 text-2xl focus:outline-none"
+                    >
+                      <Star
+                        className={`w-6 h-6 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Review Title</label>
+                <input
+                  type="text"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  placeholder="e.g. Effective medicine for quick relief"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Your Review</label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Share details about the packaging, delivery or effectiveness..."
+                  rows={3}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="px-5 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50"
+                >
+                  {submittingReview ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  )
+}
