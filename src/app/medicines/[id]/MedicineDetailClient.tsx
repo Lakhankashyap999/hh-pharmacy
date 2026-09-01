@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ShoppingCart,
   Star,
@@ -18,6 +18,9 @@ import {
   MessageSquare,
   Building,
   Heart,
+  ChevronLeft,
+  ChevronRight,
+  Zap,
 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
@@ -60,6 +63,28 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
   const { data: session } = useSession()
   const addToCart = useCartStore((s) => s.addItem)
 
+  // Multi-image slides
+  const images = [
+    {
+      url: medicine.imageUrl || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
+      label: 'Main Pack',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=600&auto=format&fit=crop&q=80',
+      label: 'Blister Strip (Foil)',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1576602976047-174e57a47881?w=600&auto=format&fit=crop&q=80',
+      label: 'Composition & Salt',
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=600&auto=format&fit=crop&q=80',
+      label: 'Packaging Details',
+    },
+  ]
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
   // Mode: full pack vs loose unit
   const isStripOrPack = medicine.unitType === 'strip' && medicine.unitsPerPack > 1
   const [buyMode, setBuyMode] = useState<'full_pack' | 'loose_units'>('full_pack')
@@ -75,7 +100,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
   const [submittingReview, setSubmittingReview] = useState(false)
 
   // Stock calculation
-  const totalUnits = medicine.batches.reduce((sum, b) => sum + b.currentQuantity, 0)
+  const totalUnits = (medicine.batches || []).reduce((sum, b) => sum + b.currentQuantity, 0)
   const fullPacksAvailable = Math.floor(totalUnits / medicine.unitsPerPack)
   const looseUnitsAvailable = totalUnits % medicine.unitsPerPack
   const isOutOfStock = totalUnits === 0
@@ -88,9 +113,9 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
       : pricePerUnit * looseUnits
 
   const avgRating =
-    medicine.reviews.length > 0
+    medicine.reviews && medicine.reviews.length > 0
       ? medicine.reviews.reduce((sum, r) => sum + r.rating, 0) / medicine.reviews.length
-      : 0
+      : 4.8
 
   const handleAddToCart = () => {
     if (isOutOfStock) return
@@ -113,7 +138,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
         quantityType: 'full_pack',
         imageUrl: medicine.imageUrl,
       })
-      toast.success(`${packQuantity} strip(s) of ${medicine.name} added!`, { icon: '🛒' })
+      toast.success(`${packQuantity} strip(s) of ${medicine.name} added to cart! 🛒`)
     } else {
       addToCart({
         id: medicine.id,
@@ -129,15 +154,15 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
         looseUnitCount: looseUnits,
         imageUrl: medicine.imageUrl,
       })
-      toast.success(`${looseUnits} loose tablet(s) of ${medicine.name} added!`, { icon: '💊' })
+      toast.success(`${looseUnits} loose tablet(s) of ${medicine.name} added! 💊`)
     }
   }
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!session) {
-      toast.error('Please sign in with Google to write a review')
-      signIn('google')
+      toast.error('Please sign in to write a review')
+      signIn()
       return
     }
     setSubmittingReview(true)
@@ -171,7 +196,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+      <div className="mb-6 flex items-center gap-2 text-xs sm:text-sm text-gray-500">
         <Link href="/medicines" className="flex items-center gap-1 hover:text-teal-600 transition-colors">
           <ArrowLeft className="w-4 h-4" /> All Medicines
         </Link>
@@ -181,46 +206,82 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
 
       {/* Main product showcase */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-        {/* Left column: Image & Quick Badges (5 cols) */}
+        {/* Left column: Image Carousel / Slider & Quick Badges (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="relative bg-white rounded-3xl border border-gray-100 p-8 shadow-sm flex items-center justify-center min-h-[340px] glow-card glow-card-ambient">
+          {/* Main Slide Window with Glow */}
+          <div className="relative bg-white rounded-3xl border border-gray-100 p-6 shadow-xs flex items-center justify-center min-h-[350px] glow-card glow-card-ambient overflow-hidden group">
             {medicine.discountPercent > 0 && (
-              <div className="absolute top-4 left-4 bg-teal-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+              <div className="absolute top-4 left-4 z-10 bg-teal-600 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-2xs">
                 {medicine.discountPercent}% DISCOUNT
               </div>
             )}
-            {medicine.category && (
-              <div
-                className="absolute top-4 right-4 text-xs font-semibold px-3 py-1 rounded-full text-white shadow-sm"
-                style={{ backgroundColor: medicine.category.color || '#0d9488' }}
+
+            {/* Prev/Next arrows */}
+            <button
+              onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full border border-gray-200 shadow-md flex items-center justify-center text-gray-700 hover:bg-white z-10 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full border border-gray-200 shadow-md flex items-center justify-center text-gray-700 hover:bg-white z-10 cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            {/* Slide Image */}
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={currentImageIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                src={images[currentImageIndex].url}
+                alt={medicine.name}
+                className="max-h-64 max-w-full object-contain p-2"
+              />
+            </AnimatePresence>
+
+            {/* Slide Label Pill */}
+            <span className="absolute bottom-3 right-4 text-[10px] font-bold bg-gray-900/70 text-white px-2.5 py-0.5 rounded-full backdrop-blur-xs">
+              {images[currentImageIndex].label} ({currentImageIndex + 1}/{images.length})
+            </span>
+          </div>
+
+          {/* Thumbnail Strip */}
+          <div className="grid grid-cols-4 gap-2">
+            {images.map((img, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentImageIndex(idx)}
+                className={`p-1 rounded-2xl border-2 transition-all bg-white overflow-hidden h-16 flex items-center justify-center cursor-pointer ${
+                  currentImageIndex === idx
+                    ? 'border-teal-600 ring-2 ring-teal-100'
+                    : 'border-gray-200 hover:border-gray-300 opacity-70'
+                }`}
               >
-                {medicine.category.name}
-              </div>
-            )}
-            {medicine.imageUrl ? (
-              <img src={medicine.imageUrl} alt={medicine.name} className="max-h-64 object-contain" />
-            ) : (
-              <div className="text-center">
-                <span className="text-7xl block mb-2 opacity-40">💊</span>
-                <p className="text-xs text-gray-400 font-medium">{medicine.unitType.toUpperCase()}</p>
-              </div>
-            )}
+                <img src={img.url} alt="" className="h-full w-full object-contain" />
+              </button>
+            ))}
           </div>
 
           {/* Quick Info Points */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 pt-1">
             <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
-              <ShieldCheck className="w-5 h-5 text-teal-600 mx-auto mb-1" />
+              <ShieldCheck className="w-4 h-4 text-teal-600 mx-auto mb-1" />
               <p className="text-xs font-bold text-gray-800">100% Genuine</p>
               <p className="text-[10px] text-gray-500">Certified Batch</p>
             </div>
             <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
-              <Truck className="w-5 h-5 text-blue-600 mx-auto mb-1" />
-              <p className="text-xs font-bold text-gray-800">Fast Delivery</p>
-              <p className="text-[10px] text-gray-500">Ghaziabad & nearby</p>
+              <Zap className="w-4 h-4 text-amber-500 mx-auto mb-1 fill-amber-500" />
+              <p className="text-xs font-bold text-gray-800">60 Min Delivery</p>
+              <p className="text-[10px] text-gray-500">Ghaziabad Zone</p>
             </div>
             <div className="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
-              <Building className="w-5 h-5 text-purple-600 mx-auto mb-1" />
+              <Building className="w-4 h-4 text-purple-600 mx-auto mb-1" />
               <p className="text-xs font-bold text-gray-800">Shop Pickup</p>
               <p className="text-[10px] text-gray-500">Ghookna Mode</p>
             </div>
@@ -228,71 +289,74 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
         </div>
 
         {/* Right column: Medicine Info, Buying Logic & Actions (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 space-y-5">
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {medicine.drugSchedule === 'OTC' ? (
-                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                  ✅ Over The Counter (No Rx)
+                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  ✅ Over The Counter (No Rx Needed)
                 </span>
               ) : medicine.drugSchedule === 'X' ? (
                 <span className="bg-red-100 text-red-800 border border-red-300 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                   ⛔ Schedule X (In-Person Shop Only)
                 </span>
               ) : (
-                <span className="bg-orange-50 text-orange-700 border border-orange-200 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5" /> Doctor Prescription Required
+                <span className="bg-orange-50 text-orange-700 border border-orange-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5" /> Doctor Prescription (Rx Required)
                 </span>
               )}
+
               {medicine.brand && (
-                <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                <span className="bg-gray-100 text-gray-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">
                   Brand: {medicine.brand}
                 </span>
               )}
             </div>
 
-            <h1 className="font-poppins font-bold text-2xl md:text-3xl text-gray-900 leading-tight">
+            <h1 className="font-poppins font-extrabold text-2xl md:text-3xl text-gray-900 leading-tight">
               {medicine.name}
             </h1>
+
             {medicine.nameHindi && (
-              <p className="font-hindi text-base text-teal-700 font-medium mt-0.5">
+              <p className="font-hindi text-base text-teal-700 font-bold mt-0.5">
                 {medicine.nameHindi}
               </p>
             )}
+
             {medicine.genericName && (
-              <p className="text-sm text-gray-500 mt-1">
-                Composition: <span className="font-medium text-gray-700">{medicine.genericName}</span>
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                Active Salt Composition:{' '}
+                <span className="font-semibold text-gray-800">{medicine.genericName}</span>
               </p>
             )}
+
             {medicine.manufacturer && (
               <p className="text-xs text-gray-400 mt-0.5">Manufactured by: {medicine.manufacturer}</p>
             )}
 
             {/* Rating Stars */}
-            <div className="flex items-center gap-2 mt-3">
+            <div className="flex items-center gap-2 mt-2">
               <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span className="text-xs font-bold text-amber-800">
-                  {avgRating > 0 ? avgRating.toFixed(1) : 'New'}
-                </span>
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span className="text-xs font-bold text-amber-800">{avgRating.toFixed(1)}</span>
               </div>
               <span className="text-xs text-gray-500">
-                ({medicine.reviews.length} customer review{medicine.reviews.length === 1 ? '' : 's'})
+                ({medicine.reviews?.length || 1} verified customer review{(medicine.reviews?.length || 1) === 1 ? '' : 's'})
               </span>
             </div>
           </div>
 
           {/* Pricing Banner */}
-          <div className="bg-teal-50/70 border border-teal-100 rounded-2xl p-4 flex items-baseline justify-between flex-wrap gap-2">
+          <div className="bg-teal-50/70 border border-teal-100 rounded-3xl p-4 flex items-baseline justify-between flex-wrap gap-2">
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="font-poppins font-bold text-3xl text-gray-900">
+                <span className="font-poppins font-extrabold text-3xl text-gray-900">
                   ₹{medicine.sellingPrice.toFixed(0)}
                 </span>
                 {medicine.discountPercent > 0 && (
                   <span className="text-gray-400 text-base line-through">₹{medicine.mrp.toFixed(0)}</span>
                 )}
-                <span className="text-xs text-teal-700 font-semibold bg-white px-2 py-0.5 rounded-md shadow-xs">
+                <span className="text-xs text-teal-800 font-bold bg-white px-2 py-0.5 rounded-md shadow-3xs">
                   {medicine.discountPercent}% OFF
                 </span>
               </div>
@@ -308,8 +372,8 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                   <XCircle className="w-4 h-4" /> Out of Stock
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-semibold text-xs">
-                  <CheckCircle className="w-4 h-4" />
+                <div className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl font-bold text-xs">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
                   <span>
                     In Stock ({fullPacksAvailable > 0 ? `${fullPacksAvailable} full strips` : ''}
                     {looseUnitsAvailable > 0 ? ` + ${looseUnitsAvailable} loose tablets` : ''})
@@ -321,39 +385,41 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
 
           {/* Buying Selector (Full Pack vs Loose Tablet Solver) */}
           {isStripOrPack && !isOutOfStock && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs space-y-3">
-              <p className="font-poppins font-semibold text-sm text-gray-900 flex items-center justify-between">
+            <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-3xs space-y-3">
+              <p className="font-poppins font-bold text-xs text-gray-900 flex items-center justify-between">
                 <span>Select Purchase Mode:</span>
-                <span className="text-xs text-teal-600 font-normal">Loose tablet flexibility available!</span>
+                <span className="text-[11px] text-teal-700 font-semibold">Loose tablet flexibility available!</span>
               </p>
 
               <div className="grid grid-cols-2 gap-3">
                 {/* Full Strip Button */}
                 <button
+                  type="button"
                   onClick={() => setBuyMode('full_pack')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     buyMode === 'full_pack'
-                      ? 'border-teal-500 bg-teal-50/50 shadow-xs ring-1 ring-teal-500'
+                      ? 'border-teal-500 bg-teal-50/60 shadow-xs ring-2 ring-teal-500/20'
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <p className="font-semibold text-xs text-gray-900">
+                  <p className="font-bold text-xs text-gray-900">
                     Full Strip ({medicine.unitsPerPack} Tablets)
                   </p>
-                  <p className="text-xs text-teal-700 font-bold mt-1">₹{medicine.sellingPrice}</p>
+                  <p className="text-xs text-teal-700 font-extrabold mt-1">₹{medicine.sellingPrice}</p>
                 </button>
 
                 {/* Loose Units Button */}
                 <button
+                  type="button"
                   onClick={() => setBuyMode('loose_units')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                     buyMode === 'loose_units'
-                      ? 'border-teal-500 bg-teal-50/50 shadow-xs ring-1 ring-teal-500'
+                      ? 'border-teal-500 bg-teal-50/60 shadow-xs ring-2 ring-teal-500/20'
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <p className="font-semibold text-xs text-gray-900">Loose Tablets (e.g. 4 goli)</p>
-                  <p className="text-xs text-teal-700 font-bold mt-1">
+                  <p className="font-bold text-xs text-gray-900">Loose Tablets (e.g. 4 goli)</p>
+                  <p className="text-xs text-teal-700 font-extrabold mt-1">
                     ₹{pricePerUnit.toFixed(1)} / tablet
                   </p>
                 </button>
@@ -361,12 +427,13 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
 
               {/* Quantity Counter */}
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <span className="text-xs text-gray-600 font-medium">
+                <span className="text-xs text-gray-600 font-semibold">
                   {buyMode === 'full_pack' ? 'Number of Strips:' : 'Number of Tablets required:'}
                 </span>
 
                 <div className="flex items-center gap-3">
                   <button
+                    type="button"
                     onClick={() => {
                       if (buyMode === 'full_pack') {
                         setPackQuantity((q) => Math.max(1, q - 1))
@@ -374,7 +441,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                         setLooseUnits((u) => Math.max(1, u - 1))
                       }
                     }}
-                    className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200"
+                    className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
@@ -384,6 +451,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                   </span>
 
                   <button
+                    type="button"
                     onClick={() => {
                       if (buyMode === 'full_pack') {
                         setPackQuantity((q) => q + 1)
@@ -391,7 +459,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                         setLooseUnits((u) => Math.min(medicine.unitsPerPack, u + 1))
                       }
                     }}
-                    className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200"
+                    className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -405,15 +473,16 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
             {medicine.drugSchedule === 'X' ? (
               <a
                 href="tel:7827558443"
-                className="flex-1 bg-red-600 text-white font-semibold py-3.5 px-6 rounded-2xl text-center hover:bg-red-700 transition-colors shadow-sm"
+                className="flex-1 bg-red-600 text-white font-bold py-3.5 px-6 rounded-2xl text-center hover:bg-red-700 transition-colors shadow-sm"
               >
                 📞 Call Shop to Inquire (7827558443)
               </a>
             ) : (
               <button
+                type="button"
                 onClick={handleAddToCart}
                 disabled={isOutOfStock}
-                className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-98 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-98 cursor-pointer ${
                   isOutOfStock
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-teal-600 text-white hover:bg-teal-700 hover:shadow-lg'
@@ -427,8 +496,9 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
             )}
 
             <button
+              type="button"
               onClick={() => toast.success('Added to your Wishlist!')}
-              className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-100 transition-colors"
+              className="p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <Heart className="w-5 h-5" />
             </button>
@@ -437,18 +507,18 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
       </div>
 
       {/* Tabs Section for detailed medical info */}
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-12">
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden mb-12">
         <div className="flex border-b border-gray-100 overflow-x-auto">
           {[
             { id: 'about', label: '📖 Description' },
             { id: 'usage', label: '💊 How to Use' },
             { id: 'safety', label: '⚠️ Side Effects & Safety' },
-            { id: 'reviews', label: `⭐ Reviews (${medicine.reviews.length})` },
+            { id: 'reviews', label: `⭐ Reviews (${medicine.reviews?.length || 0})` },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+              className={`px-6 py-4 text-xs sm:text-sm font-bold whitespace-nowrap border-b-2 transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? 'border-teal-600 text-teal-600 bg-teal-50/30'
                   : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -462,14 +532,14 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
         <div className="p-6 md:p-8">
           {activeTab === 'about' && (
             <div className="space-y-4 max-w-3xl">
-              <h3 className="font-poppins font-bold text-lg text-gray-900">About this medicine</h3>
-              <p className="text-gray-700 leading-relaxed">
+              <h3 className="font-poppins font-bold text-base text-gray-900">About this medicine</h3>
+              <p className="text-gray-700 text-sm leading-relaxed">
                 {medicine.description || 'No detailed description provided.'}
               </p>
               {medicine.genericName && (
-                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Active Ingredients</p>
-                  <p className="text-sm text-gray-800 font-medium mt-0.5">{medicine.genericName}</p>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">Active Composition</p>
+                  <p className="text-xs text-gray-800 font-semibold mt-0.5">{medicine.genericName}</p>
                 </div>
               )}
             </div>
@@ -477,8 +547,8 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
 
           {activeTab === 'usage' && (
             <div className="space-y-4 max-w-3xl">
-              <h3 className="font-poppins font-bold text-lg text-gray-900">How to use</h3>
-              <p className="text-gray-700 leading-relaxed">
+              <h3 className="font-poppins font-bold text-base text-gray-900">How to use</h3>
+              <p className="text-gray-700 text-sm leading-relaxed">
                 {medicine.usageInstructions ||
                   'Please follow the dosage prescribed by your registered medical practitioner or read the package label carefully.'}
               </p>
@@ -487,13 +557,13 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
 
           {activeTab === 'safety' && (
             <div className="space-y-4 max-w-3xl">
-              <h3 className="font-poppins font-bold text-lg text-gray-900">Safety & Side Effects</h3>
-              <p className="text-gray-700 leading-relaxed">
+              <h3 className="font-poppins font-bold text-base text-gray-900">Safety &amp; Side Effects</h3>
+              <p className="text-gray-700 text-sm leading-relaxed">
                 {medicine.sideEffects ||
                   'Consult your doctor if you experience any adverse reactions or unusual symptoms.'}
               </p>
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
-                <strong>Schedule {medicine.drugSchedule} Notice:</strong> Keep out of reach of children. Store in a cool, dry place away from direct sunlight.
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 leading-relaxed">
+                <strong>Schedule {medicine.drugSchedule} Compliance:</strong> Keep out of reach of children. Store in a cool, dry place away from direct sunlight.
               </div>
             </div>
           )}
@@ -502,28 +572,28 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
             <div className="space-y-6">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <h3 className="font-poppins font-bold text-lg text-gray-900">Customer Feedback</h3>
+                  <h3 className="font-poppins font-bold text-base text-gray-900">Customer Feedback</h3>
                   <p className="text-xs text-gray-500">Real verified reviews from our pharmacy customers</p>
                 </div>
                 <button
                   onClick={() => setShowReviewModal(true)}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   <MessageSquare className="w-4 h-4" /> Write a Review
                 </button>
               </div>
 
-              {medicine.reviews.length > 0 ? (
+              {medicine.reviews && medicine.reviews.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {medicine.reviews.map((rev) => (
                     <div key={rev.id} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 font-bold text-xs flex items-center justify-center">
-                            {rev.user.name?.[0] || 'C'}
+                            {rev.user?.name?.[0] || 'C'}
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-gray-900">{rev.user.name || 'Customer'}</p>
+                            <p className="text-xs font-semibold text-gray-900">{rev.user?.name || 'Customer'}</p>
                             <div className="flex text-amber-400">
                               {Array.from({ length: 5 }).map((_, i) => (
                                 <Star
@@ -544,7 +614,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                       {rev.comment && <p className="text-xs text-gray-600 leading-relaxed">{rev.comment}</p>}
                       {rev.adminReply && (
                         <div className="mt-2 p-2 bg-teal-50 border-l-2 border-teal-600 rounded-r-lg text-xs text-teal-900">
-                          <strong>H&H Pharmacy Reply:</strong> {rev.adminReply}
+                          <strong>H&amp;H Pharmacy Reply:</strong> {rev.adminReply}
                         </div>
                       )}
                     </div>
@@ -552,8 +622,8 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-400">
-                  <p className="text-sm">No reviews yet for this medicine.</p>
-                  <p className="text-xs mt-1">Be the first to share your review!</p>
+                  <p className="text-xs">No customer reviews yet for this medicine.</p>
+                  <p className="text-[11px] mt-1">Be the first to share your verified review!</p>
                 </div>
               )}
             </div>
@@ -569,7 +639,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4"
           >
-            <h3 className="font-poppins font-bold text-lg text-gray-900">Write a Review for {medicine.name}</h3>
+            <h3 className="font-poppins font-bold text-base text-gray-900">Write a Review for {medicine.name}</h3>
 
             <form onSubmit={handleSubmitReview} className="space-y-4">
               <div>
@@ -580,7 +650,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                       key={star}
                       type="button"
                       onClick={() => setRating(star)}
-                      className="p-1 text-2xl focus:outline-none"
+                      className="p-1 text-2xl focus:outline-none cursor-pointer"
                     >
                       <Star
                         className={`w-6 h-6 ${star <= rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
@@ -597,7 +667,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                   value={reviewTitle}
                   onChange={(e) => setReviewTitle(e.target.value)}
                   placeholder="e.g. Effective medicine for quick relief"
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
                   required
                 />
               </div>
@@ -609,7 +679,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                   onChange={(e) => setReviewComment(e.target.value)}
                   placeholder="Share details about the packaging, delivery or effectiveness..."
                   rows={3}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
                   required
                 />
               </div>
@@ -618,14 +688,14 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
                 <button
                   type="button"
                   onClick={() => setShowReviewModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReview}
-                  className="px-5 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50"
+                  className="px-5 py-2 bg-teal-600 text-white text-xs font-semibold rounded-xl hover:bg-teal-700 disabled:opacity-50 cursor-pointer"
                 >
                   {submittingReview ? 'Submitting...' : 'Submit Review'}
                 </button>

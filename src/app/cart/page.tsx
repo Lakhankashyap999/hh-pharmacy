@@ -21,12 +21,34 @@ import {
   Phone,
   User,
   AlertTriangle,
+  Zap,
+  X,
+  AlertCircle,
 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import { useSession } from 'next-auth/react'
 import Header from '@/components/customer/Header'
 import Footer from '@/components/customer/Footer'
 import toast from 'react-hot-toast'
+
+// Serviceable Ghaziabad delivery pincodes & keywords
+const SERVICEABLE_PINCODES = ['201001', '201002', '201003', '201004', '201005', '201009', '201017']
+const SERVICEABLE_KEYWORDS = [
+  'ghaziabad',
+  'ghookna',
+  'ghookna mode',
+  'sanjay nagar',
+  'raj nagar',
+  'patel nagar',
+  'nandgram',
+  'meerut road',
+  'kavi nagar',
+  'govindpuram',
+  'shastri nagar',
+  'gali no-3',
+  'gali 3',
+  'kh no-606',
+]
 
 export default function CartPage() {
   const router = useRouter()
@@ -39,16 +61,33 @@ export default function CartPage() {
   const [customerName, setCustomerName] = useState(session?.user?.name || '')
   const [customerPhone, setCustomerPhone] = useState('')
   const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [pincode, setPincode] = useState('201003')
   const [paymentMode, setPaymentMode] = useState<'COD' | 'UPI'>('COD')
   const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null)
   const [isUploadingRx, setIsUploadingRx] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Unserviceable Location Modal
+  const [showUnserviceableModal, setShowUnserviceableModal] = useState(false)
+
   const cartTotal = total()
   const deliveryFee = deliveryType === 'delivery' ? (cartTotal > 500 ? 0 : 40) : 0
   const finalPayable = cartTotal + deliveryFee
   const hasRxItems = hasPrescriptionRequired()
+
+  // Verify delivery location serviceable
+  const checkServiceableLocation = (addr: string, pin: string) => {
+    const cleanPin = pin.trim()
+    const cleanAddr = addr.toLowerCase()
+
+    // If matching pincode or local keyword
+    if (SERVICEABLE_PINCODES.includes(cleanPin)) return true
+    for (const kw of SERVICEABLE_KEYWORDS) {
+      if (cleanAddr.includes(kw)) return true
+    }
+    return false
+  }
 
   // Simulated prescription upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +96,6 @@ export default function CartPage() {
 
     setIsUploadingRx(true)
     setTimeout(() => {
-      // In real production, this uploads to Supabase storage / S3
       setPrescriptionUrl(URL.createObjectURL(file))
       setIsUploadingRx(false)
       toast.success('Prescription uploaded successfully! 📋')
@@ -77,9 +115,18 @@ export default function CartPage() {
       return
     }
 
-    if (deliveryType === 'delivery' && !deliveryAddress.trim()) {
-      toast.error('Please enter your delivery address')
-      return
+    if (deliveryType === 'delivery') {
+      if (!deliveryAddress.trim()) {
+        toast.error('Please enter your complete delivery address')
+        return
+      }
+
+      // Check distance & serviceable radius
+      const isServiceable = checkServiceableLocation(deliveryAddress, pincode)
+      if (!isServiceable) {
+        setShowUnserviceableModal(true)
+        return
+      }
     }
 
     if (hasRxItems && !prescriptionUrl) {
@@ -94,7 +141,10 @@ export default function CartPage() {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         deliveryType,
-        deliveryAddress: deliveryType === 'delivery' ? deliveryAddress.trim() : 'Pickup from H&H Shop, Ghookna Mode',
+        deliveryAddress:
+          deliveryType === 'delivery'
+            ? `${deliveryAddress.trim()} (Pincode: ${pincode.trim()})`
+            : 'Pickup from H&H Shop, Ghookna Mode, Gali No-03',
         totalAmount: finalPayable,
         discountAmount: 0,
         paymentMode,
@@ -129,7 +179,7 @@ export default function CartPage() {
       } else {
         toast.error('Failed to place order. Please try again.')
       }
-    } catch (err) {
+    } catch {
       toast.error('Network error. Please check your connection.')
     } finally {
       setIsSubmitting(false)
@@ -142,14 +192,21 @@ export default function CartPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8 w-full">
         {/* Page Title */}
-        <div className="mb-6">
-          <h1 className="font-poppins font-bold text-2xl md:text-3xl text-gray-900 flex items-center gap-2">
-            <span>Your Cart</span>
-            <span className="text-teal-600 text-lg font-normal">({items.length} items)</span>
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Review medicines, adjust loose tablet quantities, and choose delivery or pickup
-          </p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h1 className="font-poppins font-extrabold text-2xl md:text-3xl text-gray-900 flex items-center gap-2">
+              <span>Your Medicine Cart</span>
+              <span className="text-teal-600 text-base font-bold">({items.length} items)</span>
+            </h1>
+            <p className="text-gray-500 text-xs mt-1">
+              Review medicines, loose tablet quantities, 60-min Ghaziabad delivery &amp; upload doctor prescription
+            </p>
+          </div>
+
+          <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-2xl w-fit">
+            <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+            <span>60 Min Delivery in Ghaziabad</span>
+          </div>
         </div>
 
         {items.length === 0 ? (
@@ -158,12 +215,12 @@ export default function CartPage() {
               🛒
             </div>
             <h2 className="font-poppins font-bold text-xl text-gray-900 mb-1">Your cart is empty</h2>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-xs text-gray-500 mb-6">
               Browse our medicine catalog to find OTC, Ayurvedic, and prescription medicines.
             </p>
             <Link
               href="/medicines"
-              className="inline-flex items-center justify-center px-6 py-3 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 transition-colors shadow-sm"
+              className="inline-flex items-center justify-center px-6 py-3 bg-teal-600 text-white font-bold rounded-2xl hover:bg-teal-700 transition-colors shadow-sm text-xs cursor-pointer"
             >
               Browse Medicines Now
             </Link>
@@ -174,12 +231,12 @@ export default function CartPage() {
             <div className="lg:col-span-7 space-y-4">
               {/* Prescription Warning Banner if any */}
               {hasRxItems && (
-                <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
+                <div className="bg-orange-50 border border-orange-200 rounded-3xl p-4 flex items-start gap-3">
                   <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                  <div className="text-xs text-orange-900 leading-relaxed">
-                    <p className="font-bold">Doctor Prescription Required (Schedule H Medicine):</p>
+                  <div className="text-xs text-orange-950 leading-relaxed">
+                    <p className="font-bold">Doctor Prescription Required (Schedule H / H1):</p>
                     <p className="mt-0.5 text-orange-800">
-                      Your cart includes medicines that legally require a doctor's prescription. Please upload your prescription photo below before completing the order.
+                      Your cart includes medicines that legally require a doctor's prescription. Please attach your prescription photo below.
                     </p>
                   </div>
                 </div>
@@ -191,7 +248,7 @@ export default function CartPage() {
                   <h3 className="font-poppins font-bold text-base text-gray-900">Items in Cart</h3>
                   <button
                     onClick={clearCart}
-                    className="text-xs text-red-500 hover:text-red-700 font-medium"
+                    className="text-xs text-red-500 hover:text-red-700 font-semibold cursor-pointer"
                   >
                     Clear Cart
                   </button>
@@ -209,7 +266,7 @@ export default function CartPage() {
                       <div key={item.id} className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         {/* Medicine info */}
                         <div className="flex items-start gap-3">
-                          <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center text-xl shrink-0">
+                          <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-xl shrink-0 overflow-hidden">
                             {item.imageUrl ? (
                               <img src={item.imageUrl} alt="" className="w-full h-full object-contain p-1" />
                             ) : (
@@ -217,10 +274,10 @@ export default function CartPage() {
                             )}
                           </div>
                           <div>
-                            <Link href={`/medicines/${item.id}`} className="font-semibold text-sm text-gray-900 hover:text-teal-600 transition-colors">
+                            <Link href={`/medicines/${item.id}`} className="font-bold text-xs sm:text-sm text-gray-900 hover:text-teal-600 transition-colors">
                               {item.name}
                             </Link>
-                            <p className="text-xs text-gray-400">{item.brand}</p>
+                            <p className="text-[10px] text-gray-400">{item.brand}</p>
                             {item.requiresPrescription && (
                               <span className="inline-block mt-1 bg-orange-100 text-orange-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 📋 Rx Required
@@ -228,7 +285,7 @@ export default function CartPage() {
                             )}
                             {/* Loose unit badge */}
                             {isLoose && (
-                              <p className="text-xs text-teal-700 font-medium mt-1">
+                              <p className="text-[11px] text-teal-800 font-bold mt-1">
                                 Loose Purchase: {item.looseUnitCount} tablets @ ₹{unitPrice.toFixed(1)}/each
                               </p>
                             )}
@@ -238,10 +295,10 @@ export default function CartPage() {
                         {/* Quantity controls & Price */}
                         <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                           {!isLoose ? (
-                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
+                            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-2xl px-2 py-1">
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="w-6 h-6 rounded-md bg-white flex items-center justify-center text-gray-600 hover:bg-gray-200"
+                                className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-600 hover:bg-gray-200 cursor-pointer"
                               >
                                 <Minus className="w-3 h-3" />
                               </button>
@@ -250,21 +307,21 @@ export default function CartPage() {
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="w-6 h-6 rounded-md bg-white flex items-center justify-center text-gray-600 hover:bg-gray-200"
+                                className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-600 hover:bg-gray-200 cursor-pointer"
                               >
                                 <Plus className="w-3 h-3" />
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-xl px-2 py-1">
-                              <span className="text-xs text-teal-800 font-semibold">
+                            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-2xl px-2.5 py-1">
+                              <span className="text-xs text-teal-800 font-bold">
                                 {item.looseUnitCount} Tablets
                               </span>
                             </div>
                           )}
 
                           <div className="text-right min-w-[70px]">
-                            <p className="font-poppins font-bold text-sm text-gray-900">
+                            <p className="font-poppins font-extrabold text-sm text-gray-900">
                               ₹{itemTotal.toFixed(0)}
                             </p>
                             <p className="text-[10px] text-gray-400">
@@ -274,7 +331,7 @@ export default function CartPage() {
 
                           <button
                             onClick={() => removeItem(item.id)}
-                            className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                            className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -304,7 +361,7 @@ export default function CartPage() {
                         <button
                           type="button"
                           onClick={() => setPrescriptionUrl(null)}
-                          className="text-xs text-red-500 hover:underline"
+                          className="text-xs text-red-500 hover:underline cursor-pointer"
                         >
                           Remove / Re-upload
                         </button>
@@ -313,7 +370,7 @@ export default function CartPage() {
                       <div>
                         <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                         <label className="cursor-pointer">
-                          <span className="text-xs font-semibold text-teal-600 hover:underline">
+                          <span className="text-xs font-bold text-teal-600 hover:underline">
                             {isUploadingRx ? 'Uploading...' : 'Click to Upload Prescription Photo'}
                           </span>
                           <input
@@ -334,27 +391,32 @@ export default function CartPage() {
             {/* Right Col: Checkout & Delivery Form (5 cols) */}
             <div className="lg:col-span-5 space-y-4">
               <form onSubmit={handlePlaceOrder} className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-5">
-                <h3 className="font-poppins font-bold text-lg text-gray-900">Delivery & Payment</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-poppins font-bold text-base text-gray-900">Delivery &amp; Payment</h3>
+                  <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">
+                    ⚡ 60 MINS
+                  </span>
+                </div>
 
                 {/* Delivery Mode Toggle */}
                 <div className="grid grid-cols-2 gap-2 bg-gray-100 p-1 rounded-2xl">
                   <button
                     type="button"
                     onClick={() => setDeliveryType('delivery')}
-                    className={`py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                    className={`py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       deliveryType === 'delivery'
-                        ? 'bg-white text-teal-700 shadow-xs'
+                        ? 'bg-white text-teal-800 shadow-xs'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    <Truck className="w-4 h-4" /> Home Delivery
+                    <Truck className="w-4 h-4" /> Home Delivery (60 Min)
                   </button>
                   <button
                     type="button"
                     onClick={() => setDeliveryType('pickup')}
-                    className={`py-2.5 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                    className={`py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       deliveryType === 'pickup'
-                        ? 'bg-white text-teal-700 shadow-xs'
+                        ? 'bg-white text-teal-800 shadow-xs'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -374,7 +436,7 @@ export default function CartPage() {
                         onChange={(e) => setCustomerName(e.target.value)}
                         placeholder="e.g. Rahul Sharma"
                         required
-                        className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                        className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
                       />
                     </div>
                   </div>
@@ -389,38 +451,54 @@ export default function CartPage() {
                         onChange={(e) => setCustomerPhone(e.target.value)}
                         placeholder="e.g. 9876543210"
                         required
-                        className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                        className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
                       />
                     </div>
                   </div>
 
                   {deliveryType === 'delivery' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 mb-1">Delivery Address *</label>
-                      <div className="relative">
-                        <MapPin className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                        <textarea
-                          value={deliveryAddress}
-                          onChange={(e) => setDeliveryAddress(e.target.value)}
-                          placeholder="Flat/House No, Street, Landmark, Ghaziabad..."
-                          rows={2}
-                          required
-                          className="w-full pl-9 pr-3 py-2 text-sm rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
-                        />
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-2">
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Ghaziabad Delivery Area *</label>
+                          <input
+                            type="text"
+                            value={deliveryAddress}
+                            onChange={(e) => setDeliveryAddress(e.target.value)}
+                            placeholder="e.g. House No, Gali No-3, Ghookna Mode"
+                            required
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">Pincode *</label>
+                          <input
+                            type="text"
+                            value={pincode}
+                            onChange={(e) => setPincode(e.target.value)}
+                            placeholder="201003"
+                            required
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500 font-mono font-bold"
+                          />
+                        </div>
                       </div>
+
+                      <p className="text-[10px] text-gray-400">
+                        📍 60-min delivery available across Ghaziabad (Pincodes 201001 to 201017, Ghookna Mode, Sanjay Nagar, Raj Nagar).
+                      </p>
                     </div>
                   )}
 
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Order Notes (Optional)</label>
-                    <input
-                      type="text"
-                      value={orderNotes}
-                      onChange={(e) => setOrderNotes(e.target.value)}
-                      placeholder="e.g. Please ring the doorbell twice"
-                      className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
-                    />
-                  </div>
+                  {deliveryType === 'pickup' && (
+                    <div className="bg-teal-50 p-3 rounded-2xl border border-teal-100 text-xs text-teal-950 space-y-1">
+                      <p className="font-bold">🏬 Shop Pickup Address:</p>
+                      <p className="text-teal-800">
+                        Plot No-7, Kh No-606, Shop No-01, Ghookna Mode, Gali No-03, Ghaziabad
+                      </p>
+                      <p className="text-[10px] text-teal-700">Call on arrival: 7827558443 / 8171093455</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Payment Option */}
@@ -430,35 +508,35 @@ export default function CartPage() {
                     <button
                       type="button"
                       onClick={() => setPaymentMode('COD')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                         paymentMode === 'COD'
                           ? 'border-teal-500 bg-teal-50/50 ring-1 ring-teal-500'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <p className="font-semibold text-xs text-gray-900">Cash on Delivery</p>
+                      <p className="font-bold text-xs text-gray-900">Cash on Delivery</p>
                       <p className="text-[10px] text-gray-500 mt-0.5">Pay when order arrives</p>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => setPaymentMode('UPI')}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
                         paymentMode === 'UPI'
                           ? 'border-teal-500 bg-teal-50/50 ring-1 ring-teal-500'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <p className="font-semibold text-xs text-gray-900">UPI / QR Code</p>
+                      <p className="font-bold text-xs text-gray-900">UPI / QR Code</p>
                       <p className="text-[10px] text-gray-500 mt-0.5">Pay via GPay / PhonePe</p>
                     </button>
                   </div>
 
                   {paymentMode === 'UPI' && (
                     <div className="bg-gray-50 border border-gray-200 p-3 rounded-xl text-center space-y-1">
-                      <p className="text-xs font-bold text-gray-800">Scan UPI QR on Delivery or Pay to:</p>
-                      <p className="text-xs text-teal-700 font-mono font-semibold">7827558443@upi</p>
-                      <p className="text-[10px] text-gray-400">Owner: Nishant Choudhary (H&H Pharmacy)</p>
+                      <p className="text-xs font-bold text-gray-800">Pay to Pharmacy UPI ID:</p>
+                      <p className="text-xs text-teal-700 font-mono font-bold">7827558443@upi</p>
+                      <p className="text-[10px] text-gray-400">Owners: Nishant Choudhary &amp; Harsh Kashyap</p>
                     </div>
                   )}
                 </div>
@@ -471,14 +549,17 @@ export default function CartPage() {
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery Fee</span>
-                    <span>{deliveryFee === 0 ? <span className="text-emerald-600 font-semibold">FREE</span> : `₹${deliveryFee}`}</span>
+                    <span>
+                      {deliveryFee === 0 ? (
+                        <span className="text-emerald-600 font-bold">FREE (Orders &gt; ₹500)</span>
+                      ) : (
+                        `₹${deliveryFee}`
+                      )}
+                    </span>
                   </div>
-                  {deliveryType === 'delivery' && cartTotal < 500 && (
-                    <p className="text-[10px] text-teal-700">Add ₹{(500 - cartTotal).toFixed(0)} more for FREE Delivery!</p>
-                  )}
-                  <div className="flex justify-between text-sm font-bold text-gray-900 pt-2 border-t border-gray-200">
+                  <div className="flex justify-between text-sm font-extrabold text-gray-900 pt-2 border-t border-gray-200">
                     <span>Total Payable</span>
-                    <span className="text-teal-700">₹{finalPayable.toFixed(0)}</span>
+                    <span className="text-teal-700 font-extrabold">₹{finalPayable.toFixed(0)}</span>
                   </div>
                 </div>
 
@@ -486,7 +567,7 @@ export default function CartPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-teal-600 text-white font-bold py-3.5 px-6 rounded-2xl hover:bg-teal-700 transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full bg-teal-600 text-white font-extrabold py-3.5 px-6 rounded-2xl hover:bg-teal-700 transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? (
                     'Processing Order...'
@@ -502,6 +583,58 @@ export default function CartPage() {
           </div>
         )}
       </main>
+
+      {/* Unserviceable Location Alert Modal */}
+      {showUnserviceableModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 space-y-4"
+          >
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="font-poppins font-bold text-lg text-gray-900">
+                Delivery Unavailable at this Location
+              </h3>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Aapka address hamare <strong>60-minute Ghaziabad delivery zone</strong> se bahar hai. Hamari instant delivery Ghookna Mode aur Ghaziabad radius mein uplabdh hai.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1">
+              <p className="font-bold">Solution:</p>
+              <p>1. Aap <strong>Shop Pickup</strong> select karke dukan se davai le sakte hain.</p>
+              <p>2. Ya Ghaziabad ka delivery address enter karein.</p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeliveryType('pickup')
+                  setShowUnserviceableModal(false)
+                  toast.success('Switched to Shop Pickup! You can now place order.')
+                }}
+                className="w-full py-3 bg-teal-600 text-white font-bold text-xs rounded-xl hover:bg-teal-700 cursor-pointer"
+              >
+                🏪 Switch to Shop Pickup (Ghookna Mode)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowUnserviceableModal(false)}
+                className="w-full py-2 bg-gray-100 text-gray-700 font-semibold text-xs rounded-xl hover:bg-gray-200 cursor-pointer"
+              >
+                Change Delivery Address / Pincode
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <Footer />
     </div>
