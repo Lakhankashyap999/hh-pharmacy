@@ -109,47 +109,47 @@ export default function MedicinesClient({
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="font-poppins font-bold text-2xl md:text-3xl text-gray-900">
-          All Medicines <span className="text-teal-600 font-hindi font-normal text-lg">दवाईयाँ</span>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="font-poppins font-bold text-xl sm:text-3xl text-gray-900">
+          All Medicines <span className="text-teal-600 font-hindi font-normal text-base sm:text-lg">दवाईयाँ</span>
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
           Browse authentic medicines with instant availability status & discount up to 15%
         </p>
       </div>
 
       {/* Search & Filter Controls */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm mb-8 space-y-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-4 shadow-xs mb-6 space-y-3">
         {/* Top search & sort row */}
-        <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-col md:flex-row gap-2.5 sm:gap-3">
           <div className="relative flex-1">
-            <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search className="w-4 h-4 sm:w-5 sm:h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search medicine name, generic salt (e.g. Paracetamol), or brand..."
-              className="w-full pl-11 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
+              placeholder="Search medicine name, generic salt, or brand..."
+              className="w-full pl-9 sm:pl-11 pr-8 py-2 sm:py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-xs sm:text-sm focus:outline-none focus:border-teal-500 focus:bg-white focus:ring-1 focus:ring-teal-100 transition-all"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700">
-              <ArrowUpDown className="w-4 h-4 text-gray-500" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm text-gray-700">
+              <ArrowUpDown className="w-3.5 h-3.5 text-gray-500 shrink-0" />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-transparent focus:outline-none text-sm font-medium cursor-pointer"
+                className="bg-transparent focus:outline-none text-xs sm:text-sm font-medium cursor-pointer"
               >
                 <option value="popular">Recommended</option>
                 <option value="price_asc">Price: Low to High</option>
@@ -160,7 +160,7 @@ export default function MedicinesClient({
 
             <button
               onClick={() => setInStockOnly(!inStockOnly)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-medium border transition-colors ${
                 inStockOnly
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
                   : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
@@ -173,12 +173,12 @@ export default function MedicinesClient({
         </div>
 
         {/* Category horizontal badges */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setSelectedCategory(null)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
               selectedCategory === null
-                ? 'bg-teal-600 text-white shadow-sm'
+                ? 'bg-teal-600 text-white shadow-xs'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -188,9 +188,9 @@ export default function MedicinesClient({
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1 px-3 py-1 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedCategory === cat.id
-                  ? 'bg-teal-600 text-white shadow-sm'
+                  ? 'bg-teal-600 text-white shadow-xs'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -201,33 +201,33 @@ export default function MedicinesClient({
         </div>
 
         {/* Schedule Filter Tags */}
-        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700">Filter Type:</span>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="font-medium text-gray-700 text-[11px] sm:text-xs">Type:</span>
             <button
               onClick={() => setSelectedSchedule('')}
-              className={`px-2.5 py-1 rounded-lg ${selectedSchedule === '' ? 'bg-teal-100 text-teal-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+              className={`px-2 py-0.5 rounded-lg text-[11px] sm:text-xs ${selectedSchedule === '' ? 'bg-teal-100 text-teal-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              All Types
+              All
             </button>
             <button
               onClick={() => setSelectedSchedule('OTC')}
-              className={`px-2.5 py-1 rounded-lg ${selectedSchedule === 'OTC' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+              className={`px-2 py-0.5 rounded-lg text-[11px] sm:text-xs ${selectedSchedule === 'OTC' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              OTC (No Rx Needed)
+              OTC (No Rx)
             </button>
             <button
               onClick={() => setSelectedSchedule('rx')}
-              className={`px-2.5 py-1 rounded-lg ${selectedSchedule === 'rx' ? 'bg-orange-100 text-orange-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
+              className={`px-2 py-0.5 rounded-lg text-[11px] sm:text-xs ${selectedSchedule === 'rx' ? 'bg-orange-100 text-orange-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              Prescription (Rx Required)
+              Rx Required
             </button>
           </div>
 
           {(search || selectedCategory || selectedSchedule || inStockOnly) && (
             <button
               onClick={clearFilters}
-              className="text-teal-600 hover:underline font-medium"
+              className="text-teal-600 hover:underline font-semibold text-xs"
             >
               Reset Filters
             </button>
@@ -236,15 +236,15 @@ export default function MedicinesClient({
       </div>
 
       {/* Results summary */}
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-medium text-gray-700">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs sm:text-sm font-medium text-gray-700">
           Showing <span className="font-bold text-gray-900">{filteredMedicines.length}</span> medicines
         </p>
       </div>
 
-      {/* Medicines Grid with subtle AWS-like ambient glow */}
+      {/* Medicines Grid with subtle ambient glow */}
       {filteredMedicines.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-4">
           {filteredMedicines.map((med, index) => (
             <MedicineCard key={med.id} medicine={med as any} index={index} />
           ))}

@@ -194,24 +194,24 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 text-xs sm:text-sm text-gray-500">
+      <div className="mb-4 sm:mb-6 flex items-center gap-2 text-xs sm:text-sm text-gray-500">
         <Link href="/medicines" className="flex items-center gap-1 hover:text-teal-600 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> All Medicines
+          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> All Medicines
         </Link>
         <span>/</span>
-        <span className="text-gray-900 font-medium truncate">{medicine.name}</span>
+        <span className="text-gray-900 font-medium truncate max-w-44 sm:max-w-none">{medicine.name}</span>
       </div>
 
       {/* Main product showcase */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 mb-8 sm:mb-12">
         {/* Left column: Image Carousel / Slider & Quick Badges (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
+        <div className="lg:col-span-5 space-y-3 sm:space-y-4">
           {/* Main Slide Window with Glow */}
-          <div className="relative bg-white rounded-3xl border border-gray-100 p-6 shadow-xs flex items-center justify-center min-h-[350px] glow-card glow-card-ambient overflow-hidden group">
+          <div className="relative bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-xs flex items-center justify-center min-h-[260px] sm:min-h-[350px] glow-card glow-card-ambient overflow-hidden group">
             {medicine.discountPercent > 0 && (
-              <div className="absolute top-4 left-4 z-10 bg-teal-600 text-white text-xs font-extrabold px-3 py-1 rounded-full shadow-2xs">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 bg-teal-600 text-white text-[10px] sm:text-xs font-extrabold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-2xs">
                 {medicine.discountPercent}% DISCOUNT
               </div>
             )}
@@ -313,12 +313,12 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
               )}
             </div>
 
-            <h1 className="font-poppins font-extrabold text-2xl md:text-3xl text-gray-900 leading-tight">
+            <h1 className="font-poppins font-extrabold text-xl sm:text-2xl md:text-3xl text-gray-900 leading-tight">
               {medicine.name}
             </h1>
 
             {medicine.nameHindi && (
-              <p className="font-hindi text-base text-teal-700 font-bold mt-0.5">
+              <p className="font-hindi text-sm sm:text-base text-teal-700 font-bold mt-0.5">
                 {medicine.nameHindi}
               </p>
             )}
@@ -331,7 +331,7 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
             )}
 
             {medicine.manufacturer && (
-              <p className="text-xs text-gray-400 mt-0.5">Manufactured by: {medicine.manufacturer}</p>
+              <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">Manufactured by: {medicine.manufacturer}</p>
             )}
 
             {/* Rating Stars */}
@@ -347,20 +347,20 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
           </div>
 
           {/* Pricing Banner */}
-          <div className="bg-teal-50/70 border border-teal-100 rounded-3xl p-4 flex items-baseline justify-between flex-wrap gap-2">
+          <div className="bg-teal-50/70 border border-teal-100 rounded-2xl sm:rounded-3xl p-3 sm:p-4 flex items-baseline justify-between flex-wrap gap-2">
             <div>
               <div className="flex items-baseline gap-2">
-                <span className="font-poppins font-extrabold text-3xl text-gray-900">
+                <span className="font-poppins font-extrabold text-2xl sm:text-3xl text-gray-900">
                   ₹{medicine.sellingPrice.toFixed(0)}
                 </span>
                 {medicine.discountPercent > 0 && (
-                  <span className="text-gray-400 text-base line-through">₹{medicine.mrp.toFixed(0)}</span>
+                  <span className="text-gray-400 text-sm sm:text-base line-through">₹{medicine.mrp.toFixed(0)}</span>
                 )}
-                <span className="text-xs text-teal-800 font-bold bg-white px-2 py-0.5 rounded-md shadow-3xs">
+                <span className="text-[10px] sm:text-xs text-teal-800 font-bold bg-white px-2 py-0.5 rounded-md shadow-3xs">
                   {medicine.discountPercent}% OFF
                 </span>
               </div>
-              <p className="text-xs text-gray-600 mt-1">
+              <p className="text-[11px] sm:text-xs text-gray-600 mt-1">
                 Inclusive of all taxes. (Per {medicine.unitType} of {medicine.unitsPerPack} units ≈ ₹{pricePerUnit.toFixed(1)}/unit)
               </p>
             </div>
@@ -368,12 +368,12 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
             {/* Stock status tag */}
             <div>
               {isOutOfStock ? (
-                <div className="flex items-center gap-1.5 text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl font-semibold text-xs">
-                  <XCircle className="w-4 h-4" /> Out of Stock
+                <div className="flex items-center gap-1.5 text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-xl font-semibold text-xs">
+                  <XCircle className="w-3.5 h-3.5" /> Out of Stock
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-2xl font-bold text-xs">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                <div className="flex items-center gap-1.5 text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl font-bold text-xs">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                   <span>
                     In Stock ({fullPacksAvailable > 0 ? `${fullPacksAvailable} full strips` : ''}
                     {looseUnitsAvailable > 0 ? ` + ${looseUnitsAvailable} loose tablets` : ''})
@@ -385,42 +385,42 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
 
           {/* Buying Selector (Full Pack vs Loose Tablet Solver) */}
           {isStripOrPack && !isOutOfStock && (
-            <div className="bg-white rounded-3xl border border-gray-200 p-4 shadow-3xs space-y-3">
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200 p-3 sm:p-4 shadow-3xs space-y-2.5 sm:space-y-3">
               <p className="font-poppins font-bold text-xs text-gray-900 flex items-center justify-between">
                 <span>Select Purchase Mode:</span>
-                <span className="text-[11px] text-teal-700 font-semibold">Loose tablet flexibility available!</span>
+                <span className="text-[10px] sm:text-[11px] text-teal-700 font-semibold">Loose tablet flexibility available!</span>
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {/* Full Strip Button */}
                 <button
                   type="button"
                   onClick={() => setBuyMode('full_pack')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
                     buyMode === 'full_pack'
                       ? 'border-teal-500 bg-teal-50/60 shadow-xs ring-2 ring-teal-500/20'
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
                   <p className="font-bold text-xs text-gray-900">
-                    Full Strip ({medicine.unitsPerPack} Tablets)
+                    Full Strip ({medicine.unitsPerPack} Tabs)
                   </p>
-                  <p className="text-xs text-teal-700 font-extrabold mt-1">₹{medicine.sellingPrice}</p>
+                  <p className="text-xs text-teal-700 font-extrabold mt-0.5">₹{medicine.sellingPrice}</p>
                 </button>
 
                 {/* Loose Units Button */}
                 <button
                   type="button"
                   onClick={() => setBuyMode('loose_units')}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left transition-all cursor-pointer ${
                     buyMode === 'loose_units'
                       ? 'border-teal-500 bg-teal-50/60 shadow-xs ring-2 ring-teal-500/20'
                       : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <p className="font-bold text-xs text-gray-900">Loose Tablets (e.g. 4 goli)</p>
-                  <p className="text-xs text-teal-700 font-extrabold mt-1">
-                    ₹{pricePerUnit.toFixed(1)} / tablet
+                  <p className="font-bold text-xs text-gray-900">Loose Tablets</p>
+                  <p className="text-xs text-teal-700 font-extrabold mt-0.5">
+                    ₹{pricePerUnit.toFixed(1)} / tab
                   </p>
                 </button>
               </div>
