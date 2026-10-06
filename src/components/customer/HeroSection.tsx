@@ -38,9 +38,19 @@ export default function HeroSection() {
           {/* Left Column (7 cols): Main Title, Hindi Tagline, Quick Tags, Action Buttons */}
           <div className="lg:col-span-7 space-y-4">
             {/* Top pill */}
-            <div className="inline-flex items-center gap-2 bg-teal-100/80 border border-teal-200 text-teal-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-2xs">
-              <span className="w-2 h-2 bg-teal-600 rounded-full animate-pulse" />
-              <span>Ghookna Mode, Ghaziabad • Plot No-7, Kh No-606</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 bg-teal-100/80 border border-teal-200 text-teal-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-2xs">
+                <span className="w-2 h-2 bg-teal-600 rounded-full animate-pulse" />
+                <span>Ghookna Mode, Ghaziabad • Plot No-7, Kh No-606</span>
+              </div>
+              <Link
+                href="/licenses"
+                className="inline-flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-2xs transition-colors"
+                title="View Government Form 20 and 21 Licences"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                <span>UP Govt FDA Licensed (Form 20 &amp; 21)</span>
+              </Link>
             </div>
 
             {/* Main Headline */}
@@ -158,9 +168,9 @@ export default function HeroSection() {
         {/* Bottom Trust Indicators Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
           {[
-            { icon: ShieldCheck, title: '100% Genuine Medicines', sub: 'Certified genuine batch' },
+            { icon: ShieldCheck, title: '100% Genuine Medicines', sub: 'DL: RLF20UP2025007813' },
             { icon: Zap, title: '60 Mins Fast Home Delivery', sub: 'Ghookna Mode & Ghaziabad' },
-            { icon: Award, title: 'Registered Pharmacist', sub: 'Doctor prescription verified' },
+            { icon: Award, title: 'Mr. Ashwani Kumar (B.Pharma)', sub: 'Reg Pharmacist #20257554956' },
             { icon: Clock, title: 'Open 8:00 AM – 9:00 PM', sub: 'Mon–Sat fast support' },
           ].map((item, i) => (
             <div

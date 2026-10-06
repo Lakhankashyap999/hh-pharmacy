@@ -84,6 +84,25 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
           <div className="mt-4 inline-flex items-center gap-2 bg-teal-50 border border-teal-200 text-teal-800 text-xs font-semibold px-4 py-1.5 rounded-full">
             Payment Mode: {order.paymentMode} • Status: {order.status.toUpperCase()}
           </div>
+
+          {/* Statutory Pharmacy & Licence Stamp */}
+          <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-left text-xs bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200/60">
+            <div>
+              <p className="font-bold text-gray-900">H &amp; H PHARMACY (Govt. Licensed Retailer)</p>
+              <p className="text-[11px] text-gray-500">
+                DL Form 20: <strong className="font-mono text-gray-800">RLF20UP2025007813</strong> • Form 21: <strong className="font-mono text-gray-800">RLF21UP2025007766</strong>
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Dispensed by: <strong>Mr. Ashwani Kumar (B.Pharma, Reg ID: 20257554956)</strong>
+              </p>
+            </div>
+            <Link
+              href="/licenses"
+              className="text-[11px] text-teal-700 font-bold hover:underline bg-white px-2.5 py-1 rounded-lg border border-teal-200"
+            >
+              Verify Drug Licences &rarr;
+            </Link>
+          </div>
         </div>
 
         {/* Live Status Tracker */}

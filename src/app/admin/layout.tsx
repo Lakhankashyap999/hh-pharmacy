@@ -80,7 +80,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
 
         {/* User profile & footer actions */}
-        <div className="p-4 border-t border-gray-100 space-y-2">
+        <div className="p-4 border-t border-gray-100 space-y-1.5">
+          <Link
+            href="/licenses"
+            target="_blank"
+            className="flex items-center justify-between px-3 py-2 text-xs text-gray-600 hover:text-teal-600 hover:bg-gray-50 rounded-xl transition-colors font-medium"
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+              <span>Drug Licences (Form 20 &amp; 21)</span>
+            </span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
+
           <Link
             href="/"
             target="_blank"

@@ -101,6 +101,15 @@ export default function Header() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              href="/licenses"
+              className="hidden lg:flex items-center gap-1.5 text-[10px] bg-teal-800/80 hover:bg-teal-900 text-teal-100 hover:text-white px-2.5 py-0.5 rounded-full border border-teal-500/40 transition-colors"
+              title="Form 20 & 21 Licences issued by UP FDA Meerut Div"
+            >
+              <ShieldCheck className="w-3 h-3 text-emerald-300" />
+              <span>UP Govt. DL: RLF20UP2025007813</span>
+            </Link>
+
             <span className="bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
               🏷️ UP TO 15% OFF
             </span>
@@ -124,9 +133,13 @@ export default function Header() {
                 <p className="font-poppins font-extrabold text-gray-900 text-base leading-tight tracking-tight">
                   H&amp;H Pharmacy
                 </p>
-                <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wide">
-                  Licensed
-                </span>
+                <Link
+                  href="/licenses"
+                  title="View UP Govt Drug Licences (Form 20 & 21)"
+                  className="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide transition-colors"
+                >
+                  Govt. Licensed
+                </Link>
               </div>
               <p className="text-teal-600 text-[11px] font-hindi font-medium leading-none mt-0.5">
                 दवाईयाँ • Ghookna Mode

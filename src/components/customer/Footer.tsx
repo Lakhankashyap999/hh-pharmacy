@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Phone, MapPin, Clock, Shield, Heart, Zap, MessageCircle } from 'lucide-react'
+import { Phone, MapPin, Clock, ShieldCheck, Heart, Zap, MessageCircle, FileText, Award, ExternalLink } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -41,9 +41,9 @@ export default function Footer() {
               हमारे यहाँ सभी प्रकार की अंग्रेजी व देशी दवाईयाँ उचित रेट पर मिलती हैं।
             </p>
 
-            <div className="bg-gray-800 p-3 rounded-2xl border border-gray-700 max-w-md space-y-1 text-xs">
-              <p className="text-gray-400">
-                🏪 <strong>Shop Location:</strong> Plot No-7, Kh No-606, Shop No-01, Ghookna Mode, Gali No-03, Ghaziabad, UP-201003
+            <div className="bg-gray-800 p-3.5 rounded-2xl border border-gray-700 max-w-md space-y-1.5 text-xs">
+              <p className="text-gray-300">
+                🏪 <strong>Premises:</strong> Plot No-7, Khasra No-606, Shop No-01, Ghokna Mode Gali No-3, Ghaziabad, UP-201003
               </p>
               <p className="text-teal-400 font-semibold">
                 🏷️ Flat Discount Up to 15% on English &amp; Ayurvedic Medicines
@@ -97,6 +97,7 @@ export default function Footer() {
                 { href: '/medicines?schedule=OTC', label: 'OTC (No Prescription)' },
                 { href: '/medicines?category=7', label: 'Ayurvedic & Immunity' },
                 { href: '/cart', label: 'Shopping Cart & Rx Upload' },
+                { href: '/licenses', label: '📜 Official Drug Licences (Form 20/21)' },
                 { href: '/account/orders', label: 'My Past Orders & Reorder' },
                 { href: '/admin/login', label: '🔐 Admin Management' },
               ].map((link) => (
@@ -110,18 +111,70 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Official Drug Licenses & Regulatory Trust Card */}
+        <div className="bg-gradient-to-r from-gray-800 via-gray-800/90 to-gray-800 p-5 rounded-3xl border border-teal-900/60 mb-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-700/60 pb-3">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="w-6 h-6 text-teal-400 shrink-0" />
+              <div>
+                <h4 className="font-poppins font-bold text-sm text-white flex items-center gap-2">
+                  Government of Uttar Pradesh • Food Safety &amp; Drug Administration (FSDA) Certified
+                </h4>
+                <p className="text-[11px] text-gray-400">
+                  Meerut Division • File No: UP/RL/F19/2025/10307 • Site ID: UP0035348
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/licenses"
+              className="inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow-xs transition-colors self-start sm:self-auto"
+            >
+              <FileText className="w-3.5 h-3.5" /> View Full Licences &amp; Certificates
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div className="bg-gray-900/70 p-3 rounded-2xl border border-gray-700/60">
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Form 20 Retail DL No.</span>
+              <strong className="text-teal-300 font-mono text-xs">RLF20UP2025007813</strong>
+              <p className="text-[10px] text-gray-500 mt-0.5">Valid till 19-Apr-2030 (All General Drugs)</p>
+            </div>
+
+            <div className="bg-gray-900/70 p-3 rounded-2xl border border-gray-700/60">
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Form 21 Retail DL No.</span>
+              <strong className="text-teal-300 font-mono text-xs">RLF21UP2025007766</strong>
+              <p className="text-[10px] text-gray-500 mt-0.5">Valid till 19-Apr-2030 (Schedule C &amp; C1)</p>
+            </div>
+
+            <div className="bg-gray-900/70 p-3 rounded-2xl border border-gray-700/60">
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Registered Pharmacist</span>
+              <strong className="text-white text-xs">Mr. Ashwani Kumar</strong>
+              <p className="text-[10px] text-gray-400 mt-0.5">B. Pharma • Reg ID: 20257554956</p>
+            </div>
+
+            <div className="bg-gray-900/70 p-3 rounded-2xl border border-gray-700/60">
+              <span className="text-[10px] text-gray-400 uppercase font-bold block">Constitution &amp; Prop.</span>
+              <strong className="text-white text-xs">Honey Kashyap (Proprietary)</strong>
+              <p className="text-[10px] text-gray-400 mt-0.5">Nishant Choudhary &amp; Harsh Kashyap</p>
+            </div>
+          </div>
+        </div>
+
         {/* Legal Disclaimer Box */}
         <div className="border-t border-gray-800 pt-5 mb-5">
           <div className="bg-gray-800/80 rounded-2xl p-4 text-[11px] text-gray-400 leading-relaxed border border-gray-700/50">
             <p>
-              <strong className="text-gray-200">⚕️ Statutory Medical &amp; Legal Notice:</strong> H&amp;H Pharmacy operates strictly under the Drugs &amp; Cosmetics Act, 1940 and Rules, 1945. Schedule H, H1 and X medications require a valid physical or digital prescription from a registered medical practitioner. We do not dispense narcotics or controlled substances online without verified doctor verification.
+              <strong className="text-gray-200">⚕️ Statutory Medical &amp; Legal Notice:</strong> H&amp;H Pharmacy operates strictly under the Drugs &amp; Cosmetics Act, 1940 and Rules, 1945. Schedule H, H1 and X medications require a valid physical or digital prescription from a registered medical practitioner. We do not dispense narcotics or controlled substances online without verified doctor verification. All orders are verified and packed by our qualified pharmacist Mr. Ashwani Kumar.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-500">
           <p>© 2026 H&amp;H Pharmacy, Ghaziabad. All rights reserved.</p>
-          <p>Owners: Nishant Choudhary &amp; Harsh Kashyap</p>
+          <p>
+            Licensed by UP FDA Meerut Division | DL: RLF20UP2025007813 &amp; RLF21UP2025007766
+          </p>
         </div>
       </div>
     </footer>

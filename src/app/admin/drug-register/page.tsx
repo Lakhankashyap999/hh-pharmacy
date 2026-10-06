@@ -255,19 +255,30 @@ export default function AdminDrugRegisterPage() {
       </div>
 
       {/* Legal Banner */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 text-xs text-emerald-950 flex items-start gap-3">
-        <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <p className="font-bold">Govt. Drug Inspector Compliance Ready ✅</p>
-            <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
-              DL No: 20B/21B Active
-            </span>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 text-xs text-emerald-950 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-bold text-sm text-emerald-950">Govt. Drug Inspector Compliance Ready ✅</p>
+              <span className="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full font-bold">
+                DL: RLF20UP2025007813 &amp; RLF21UP2025007766
+              </span>
+            </div>
+            <p className="mt-1 text-emerald-800 leading-relaxed text-[11px]">
+              <strong>Premises:</strong> Plot No-7, Kh No-606, Shop No-01, Ghokna Mode Gali-3, Ghaziabad • <strong>Pharmacist:</strong> Mr. Ashwani Kumar (B.Pharma, Reg #20257554956) • <strong>Proprietor:</strong> Honey Kashyap
+            </p>
           </div>
-          <p className="mt-0.5 text-emerald-800 leading-relaxed">
-            Every transaction of Schedule H1 (3rd gen cephalosporins, fluoroquinolones, anti-TB) and Schedule X narcotic drugs is automatically logged with Customer Name, Prescribing Doctor, Reg No., and Date.
-          </p>
         </div>
+
+        <a
+          href="/licenses"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2 px-3.5 rounded-xl shadow-xs transition-colors"
+        >
+          View Form 20 &amp; 21 Licences &rarr;
+        </a>
       </div>
 
       {/* Controls & Search */}

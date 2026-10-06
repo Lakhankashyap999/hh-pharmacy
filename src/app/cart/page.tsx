@@ -601,6 +601,23 @@ export default function CartPage() {
                     </>
                   )}
                 </button>
+
+                {/* UP Govt FDA Trust & Licence Badge */}
+                <div className="bg-emerald-50/60 rounded-2xl p-3.5 border border-emerald-200/80 text-[11px] text-emerald-950 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-900">
+                    <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>UP Govt. FDA Retail Licences</span>
+                  </div>
+                  <p className="text-emerald-800">
+                    DL Form 20: <strong className="font-mono">RLF20UP2025007813</strong> • Form 21: <strong className="font-mono">RLF21UP2025007766</strong>
+                  </p>
+                  <p className="text-emerald-800">
+                    Dispensed strictly by Qualified Pharmacist: <strong>Mr. Ashwani Kumar (B.Pharma, Reg #20257554956)</strong>
+                  </p>
+                  <Link href="/licenses" className="text-teal-700 font-bold hover:underline inline-block pt-0.5">
+                    View Original Certificates &rarr;
+                  </Link>
+                </div>
               </form>
             </div>
           </div>
