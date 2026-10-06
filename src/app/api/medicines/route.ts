@@ -16,11 +16,11 @@ export async function GET(req: NextRequest) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search } },
-        { nameHindi: { contains: search } },
-        { genericName: { contains: search } },
-        { brand: { contains: search } },
-        { manufacturer: { contains: search } },
+        { name: { contains: search, mode: 'insensitive' } },
+        { nameHindi: { contains: search, mode: 'insensitive' } },
+        { genericName: { contains: search, mode: 'insensitive' } },
+        { brand: { contains: search, mode: 'insensitive' } },
+        { manufacturer: { contains: search, mode: 'insensitive' } },
       ]
     }
     if (categoryId) where.categoryId = parseInt(categoryId)

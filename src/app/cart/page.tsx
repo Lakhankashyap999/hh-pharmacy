@@ -367,8 +367,8 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {/* Scan prescription CTA (when no Rx item forces the upload card) */}
-              {!hasRxItems && (
+              {/* Scan prescription CTA (when no prescription is attached and no Rx item forces it) */}
+              {!hasRxItems && !prescriptionUrl && (
                 <Link
                   href="/prescription"
                   className="flex items-center justify-between gap-3 bg-teal-50 border border-teal-200 rounded-2xl p-3 hover:bg-teal-100 transition-colors"
@@ -381,12 +381,12 @@ export default function CartPage() {
                 </Link>
               )}
 
-              {/* Prescription Upload Card if required */}
-              {hasRxItems && (
+              {/* Prescription Upload / Attached Card */}
+              {(hasRxItems || !!prescriptionUrl) && (
                 <div className="bg-white rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-xs space-y-4">
                   <h3 className="font-poppins font-bold text-base text-gray-900 flex items-center gap-2">
                     <FileText className="w-5 h-5 text-teal-600" />
-                    Upload Doctor's Prescription
+                    {hasRxItems ? "Doctor's Prescription (Required)" : "Doctor's Prescription (Attached)"}
                   </h3>
                   <p className="text-xs text-gray-500">
                     Upload a clear photo of your prescription showing Doctor's name, patient name, and medicines.{' '}

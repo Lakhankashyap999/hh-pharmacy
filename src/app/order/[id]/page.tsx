@@ -61,7 +61,13 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
     )
     .join('\n')
 
-  const fullWhatsappText = `*🔔 Order Confirmation - H&H Pharmacy*\n\n*Order:* #${order.orderNumber}\n*Customer:* ${order.customerName} (${order.customerPhone})\n*Total:* ₹${order.totalAmount.toFixed(0)} (${order.paymentMode})\n*Delivery:* ${order.deliveryType.toUpperCase()}\n*Address:* ${order.deliveryAddress || 'Shop Pickup'}\n\n*Items:*\n${itemsList}${order.prescriptionImageUrl ? `\n\n*Prescription:* ${order.prescriptionImageUrl}` : ''}\n\nPlease confirm my order!`
+  const rxNote = order.prescriptionImageUrl
+    ? order.prescriptionImageUrl.startsWith('http')
+      ? `\n\n*Prescription:* ${order.prescriptionImageUrl}`
+      : '\n\n*Prescription:* Attached with order (Saved in Pharmacy portal)'
+    : ''
+
+  const fullWhatsappText = `*🔔 Order Confirmation - H&H Pharmacy*\n\n*Order:* #${order.orderNumber}\n*Customer:* ${order.customerName} (${order.customerPhone})\n*Total:* ₹${order.totalAmount.toFixed(0)} (${order.paymentMode})\n*Delivery:* ${order.deliveryType.toUpperCase()}\n*Address:* ${order.deliveryAddress || 'Shop Pickup'}\n\n*Items:*\n${itemsList}${rxNote}\n\nPlease confirm my order!`
 
   const whatsappMessage = encodeURIComponent(fullWhatsappText)
 
@@ -211,6 +217,39 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
             </div>
           </div>
         </div>
+
+        {/* Uploaded Prescription Section (if attached) */}
+        {order.prescriptionImageUrl && (
+          <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-3 mb-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-teal-600" />
+                <h3 className="font-poppins font-bold text-base text-gray-900">
+                  Attached Doctor Prescription
+                </h3>
+              </div>
+              <span
+                className={`text-xs font-bold px-3 py-1 rounded-full ${
+                  order.prescriptionStatus === 'approved'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : 'bg-amber-100 text-amber-800'
+                }`}
+              >
+                {order.prescriptionStatus === 'approved' ? '✅ Pharmacist Approved' : '⏳ Pending Pharmacist Review'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Our registered pharmacist (Mr. Ashwani Kumar) verifies your doctor prescription before dispatching your medicines.
+            </p>
+            <div className="mt-2 bg-gray-50 p-2 rounded-2xl border border-gray-200/70 inline-block">
+              <img
+                src={order.prescriptionImageUrl}
+                alt="Doctor Prescription"
+                className="max-h-72 rounded-xl object-contain"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Back link */}
         <div className="text-center">

@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     // --- 1. AI reads the prescription ---
     const genAI = new GoogleGenerativeAI(apiKey)
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash'
     const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { responseMimeType: 'application/json', temperature: 0 },

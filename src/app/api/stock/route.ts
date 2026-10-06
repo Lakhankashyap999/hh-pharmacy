@@ -11,7 +11,15 @@ export async function GET(req: NextRequest) {
       where: {
         currentQuantity: { gt: 0 },
         ...(q
-          ? { medicine: { name: { contains: q } } }
+          ? {
+              medicine: {
+                OR: [
+                  { name: { contains: q, mode: 'insensitive' } },
+                  { brand: { contains: q, mode: 'insensitive' } },
+                  { genericName: { contains: q, mode: 'insensitive' } },
+                ],
+              },
+            }
           : {}),
       },
       include: {

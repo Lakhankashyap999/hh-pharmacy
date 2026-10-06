@@ -53,8 +53,8 @@ export async function POST(req: NextRequest) {
       const medicine = await prisma.medicine.findFirst({
         where: {
           OR: [
-            { name: { contains: item.name } },
-            { genericName: { contains: item.name } },
+            { name: { contains: item.name, mode: 'insensitive' } },
+            { genericName: { contains: item.name, mode: 'insensitive' } },
           ],
         },
       })

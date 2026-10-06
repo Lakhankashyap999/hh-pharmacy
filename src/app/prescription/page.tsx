@@ -331,6 +331,18 @@ export default function PrescriptionPage() {
               >
                 Try another photo
               </button>
+              {preview && (
+                <button
+                  onClick={() => {
+                    setPrescription(preview)
+                    toast.success('Prescription cart mein attach ho gayi! Pharmacist verify karenge.')
+                    router.push('/cart')
+                  }}
+                  className="px-3 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-teal-700 shadow-xs"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" /> Cart mein attach karein &rarr;
+                </button>
+              )}
               <a
                 href="https://wa.me/917827558443?text=Hello%20H%26H%20Pharmacy%2C%20I%20want%20to%20send%20my%20prescription"
                 target="_blank"
@@ -341,7 +353,7 @@ export default function PrescriptionPage() {
               </a>
               <a
                 href="tel:7827558443"
-                className="px-3 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
+                className="px-3 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5"
               >
                 <Phone className="w-3.5 h-3.5" /> Call Pharmacist
               </a>

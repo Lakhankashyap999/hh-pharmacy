@@ -11,7 +11,14 @@ export async function GET(req: NextRequest) {
 
     const locations = await prisma.medicineLocation.findMany({
       where: {
-        medicine: { name: { contains: q }, isActive: true },
+        medicine: {
+          isActive: true,
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { genericName: { contains: q, mode: 'insensitive' } },
+            { brand: { contains: q, mode: 'insensitive' } },
+          ],
+        },
       },
       include: { medicine: { select: { id: true, name: true, brand: true, genericName: true } } },
       take: 20,
