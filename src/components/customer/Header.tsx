@@ -26,6 +26,8 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '@/store/cartStore'
+import { useLocationStore } from '@/store/locationStore'
+import { GoogleMapLocationModal } from './GoogleMapLocationModal'
 import toast from 'react-hot-toast'
 
 export default function Header() {
@@ -37,7 +39,7 @@ export default function Header() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
-  const [deliveryLocation, setDeliveryLocation] = useState('Ghookna Mode, Ghaziabad')
+  const { currentLocation } = useLocationStore()
   const [showLocationModal, setShowLocationModal] = useState(false)
 
   const cartCount = useCartStore((s) => s.items.reduce((a, i) => a + i.quantity, 0))
@@ -204,7 +206,7 @@ export default function Header() {
               <div>
                 <p className="text-[10px] text-gray-400 font-bold uppercase leading-none">Deliver to</p>
                 <p className="text-xs font-semibold text-gray-800 max-w-36 truncate leading-tight mt-0.5">
-                  {deliveryLocation}
+                  {currentLocation.subLocality || currentLocation.address}
                 </p>
               </div>
               <ChevronDown className="w-3 h-3 text-gray-400 ml-1" />
@@ -602,7 +604,7 @@ export default function Header() {
                         <div className="min-w-0">
                           <p className="text-[9px] uppercase font-bold text-teal-700 leading-none">Deliver To</p>
                           <p className="text-xs font-bold text-gray-800 leading-tight mt-0.5 truncate">
-                            {deliveryLocation}
+                            {currentLocation.subLocality || currentLocation.address}
                           </p>
                         </div>
                       </div>
@@ -801,51 +803,11 @@ export default function Header() {
           document.body
         )}
 
-      {/* PORTAL-RENDERED LOCATION MODAL */}
-      {mounted &&
-        showLocationModal &&
-        createPortal(
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-              <h3 className="font-poppins font-bold text-base text-gray-900 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-teal-600" /> Set Delivery Location
-              </h3>
-              <p className="text-xs text-gray-500">
-                We deliver in 60 minutes across Ghaziabad &amp; nearby areas.
-              </p>
-
-              <div className="space-y-2">
-                {['Ghookna Mode, Ghaziabad', 'Gali No-3, Ghaziabad', 'Sanjay Nagar, Ghaziabad', 'Raj Nagar, Ghaziabad'].map(
-                  (loc) => (
-                    <button
-                      key={loc}
-                      onClick={() => {
-                        setDeliveryLocation(loc)
-                        setShowLocationModal(false)
-                        toast.success(`Location updated to ${loc}!`)
-                      }}
-                      className={`w-full text-left p-3 rounded-xl text-xs font-semibold border transition-all ${
-                        deliveryLocation === loc
-                          ? 'border-teal-500 bg-teal-50 text-teal-900'
-                          : 'border-gray-200 hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      📍 {loc}
-                    </button>
-                  )
-                )}
-              </div>
-
-              <button
-                onClick={() => setShowLocationModal(false)}
-                className="w-full py-2 text-xs font-semibold text-gray-500 hover:bg-gray-100 rounded-xl cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* GOOGLE MAPS LOCATION PICKER MODAL */}
+      <GoogleMapLocationModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+      />
     </>
   )
 }

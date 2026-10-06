@@ -24,8 +24,11 @@ import {
   Zap,
   X,
   AlertCircle,
+  Navigation,
 } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
+import { useLocationStore } from '@/store/locationStore'
+import { GoogleMapLocationModal } from '@/components/customer/GoogleMapLocationModal'
 import { useSession } from 'next-auth/react'
 import Header from '@/components/customer/Header'
 import Footer from '@/components/customer/Footer'
@@ -34,13 +37,32 @@ import { fileToCompressedDataUrl } from '@/lib/imageCompress'
 import { MedicinePackshot } from '@/components/customer/MedicinePackshot'
 
 // Serviceable Ghaziabad delivery pincodes & keywords
-const SERVICEABLE_PINCODES = ['201001', '201002', '201003', '201004', '201005', '201009', '201017']
+const SERVICEABLE_PINCODES = [
+  '201001',
+  '201002',
+  '201003',
+  '201004',
+  '201005',
+  '201006',
+  '201007',
+  '201008',
+  '201009',
+  '201010',
+  '201011',
+  '201012',
+  '201013',
+  '201014',
+  '201015',
+  '201016',
+  '201017',
+]
 const SERVICEABLE_KEYWORDS = [
   'ghaziabad',
   'ghookna',
   'ghookna mode',
   'sanjay nagar',
   'raj nagar',
+  'raj nagar extension',
   'patel nagar',
   'nandgram',
   'meerut road',
@@ -50,6 +72,16 @@ const SERVICEABLE_KEYWORDS = [
   'gali no-3',
   'gali 3',
   'kh no-606',
+  'swarn jayanti puram',
+  'indirapuram',
+  'vaishali',
+  'vasundhara',
+  'mohan nagar',
+  'crossings republik',
+  'morta',
+  'wave city',
+  'sewa nagar',
+  'sihani',
 ]
 
 export default function CartPage() {
@@ -72,14 +104,73 @@ export default function CartPage() {
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery'>('delivery')
   const [customerName, setCustomerName] = useState(session?.user?.name || '')
   const [customerPhone, setCustomerPhone] = useState('')
+  const { currentLocation, setLocation } = useLocationStore()
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [pincode, setPincode] = useState('201003')
+  const [showMapModal, setShowMapModal] = useState(false)
+  const [isDetectingGps, setIsDetectingGps] = useState(false)
   const [paymentMode, setPaymentMode] = useState<'COD' | 'UPI'>('COD')
   const prescriptionUrl = prescriptionFile
   const setPrescriptionUrl = setPrescription
   const [isUploadingRx, setIsUploadingRx] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Auto-sync address from location store if empty
+  useEffect(() => {
+    if (currentLocation?.address && !deliveryAddress) {
+      setDeliveryAddress(currentLocation.address)
+      if (currentLocation.pincode) setPincode(currentLocation.pincode)
+    }
+  }, [currentLocation])
+
+  const handleCartGPS = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser.')
+      return
+    }
+    setIsDetectingGps(true)
+    toast('Accessing live Google GPS satellite location...', { icon: '🛰️' })
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`,
+            { headers: { 'Accept-Language': 'en' } }
+          )
+          if (res.ok) {
+            const data = await res.json()
+            const addr = data.address || {}
+            const subLocality = addr.suburb || addr.neighbourhood || addr.road || 'Ghaziabad'
+            const city = addr.city || addr.town || 'Ghaziabad'
+            const code = addr.postcode || '201003'
+            const full = `${subLocality}, ${city} - ${code}`
+            setDeliveryAddress(full)
+            setPincode(code)
+            setLocation({ address: full, subLocality: `${subLocality}, ${city}`, pincode: code, lat, lng })
+            toast.success(`📍 Live GPS Detected: ${subLocality}, ${city}!`)
+          } else {
+            const fallback = `Live Location (${lat.toFixed(4)}, ${lng.toFixed(4)}), Ghaziabad`
+            setDeliveryAddress(fallback)
+            toast.success('📍 Live GPS coordinates locked!')
+          }
+        } catch {
+          const fallback = `Live Location (${lat.toFixed(4)}, ${lng.toFixed(4)}), Ghaziabad`
+          setDeliveryAddress(fallback)
+          toast.success('📍 Live GPS coordinates locked!')
+        } finally {
+          setIsDetectingGps(false)
+        }
+      },
+      () => {
+        setIsDetectingGps(false)
+        toast.error('Location permission was denied. Please choose on Google Map.')
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   // Unserviceable Location Modal
   const [showUnserviceableModal, setShowUnserviceableModal] = useState(false)
@@ -577,21 +668,43 @@ export default function CartPage() {
 
                   {deliveryType === 'delivery' && (
                     <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          Ghaziabad Delivery Area *
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={handleCartGPS}
+                            disabled={isDetectingGps}
+                            className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <Navigation className={`w-3 h-3 ${isDetectingGps ? 'animate-spin' : ''}`} />
+                            <span>GPS Auto-Detect</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowMapModal(true)}
+                            className="text-[10px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <span>🗺️ Google Map</span>
+                          </button>
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-3 gap-2">
                         <div className="col-span-2">
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">Ghaziabad Delivery Area *</label>
                           <input
                             type="text"
                             value={deliveryAddress}
                             onChange={(e) => setDeliveryAddress(e.target.value)}
                             placeholder="e.g. House No, Gali No-3, Ghookna Mode"
                             required
-                            className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500"
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-teal-500 font-medium"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">Pincode *</label>
                           <input
                             type="text"
                             value={pincode}
@@ -771,6 +884,16 @@ export default function CartPage() {
           </motion.div>
         </div>
       )}
+
+      {/* GOOGLE MAPS LOCATION PICKER MODAL */}
+      <GoogleMapLocationModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+        onLocationSelected={(loc) => {
+          setDeliveryAddress(loc.address)
+          if (loc.pincode) setPincode(loc.pincode)
+        }}
+      />
 
       <Footer />
     </div>
