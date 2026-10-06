@@ -172,15 +172,16 @@ export default function Header() {
           {/* DESKTOP HEADER (md & up) */}
           <div className="hidden md:flex items-center gap-4 lg:gap-6 justify-between py-2.5">
             {/* Logo & Shop Details */}
-            <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-              <div className="w-10 h-10 bg-teal-600 rounded-2xl flex items-center justify-center shadow-md group-hover:bg-teal-700 transition-colors shrink-0">
+            {/* Logo & Shop Details */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <Link href="/" className="w-10 h-10 bg-teal-600 rounded-2xl flex items-center justify-center shadow-md hover:bg-teal-700 transition-colors shrink-0">
                 <span className="text-white font-poppins font-extrabold text-sm tracking-tight">H&amp;H</span>
-              </div>
+              </Link>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <p className="font-poppins font-extrabold text-gray-900 text-base leading-tight tracking-tight">
+                  <Link href="/" className="font-poppins font-extrabold text-gray-900 text-base leading-tight tracking-tight hover:text-teal-700 transition-colors">
                     H&amp;H Pharmacy
-                  </p>
+                  </Link>
                   <Link
                     href="/licenses"
                     title="View UP Govt Drug Licences (Form 20 & 21)"
@@ -189,27 +190,39 @@ export default function Header() {
                     Govt. Licensed
                   </Link>
                 </div>
-                <p className="text-teal-600 text-[11px] font-hindi font-medium leading-none mt-0.5">
-                  दवाईयाँ • Ghookna Mode
-                </p>
-              </div>
-            </Link>
 
-            {/* Quick Location Pill */}
+                {/* Dynamic Clickable Subtitle under Logo */}
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(true)}
+                  className="flex items-center gap-1 text-teal-700 hover:text-teal-900 text-[11px] font-semibold leading-none mt-1 group/loc cursor-pointer"
+                  title="Click to change delivery location"
+                >
+                  <MapPin className="w-2.5 h-2.5 text-teal-600 shrink-0" />
+                  <span className="truncate max-w-36 border-b border-dotted border-teal-400 group-hover/loc:border-teal-700">
+                    {currentLocation.subLocality || 'Ghookna Mode'}
+                  </span>
+                  <ChevronDown className="w-2.5 h-2.5 text-gray-400 group-hover/loc:text-teal-700 shrink-0" />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Location Pill beside Logo (Visible on desktop & tablet) */}
             <button
               onClick={() => setShowLocationModal(true)}
-              className="hidden lg:flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200/80 px-3 py-1.5 rounded-xl text-left transition-colors shrink-0 cursor-pointer"
+              className="flex items-center gap-2 bg-teal-50/80 hover:bg-teal-100/90 border border-teal-200/80 px-3 py-1.5 rounded-2xl text-left transition-all shrink-0 cursor-pointer shadow-3xs group"
+              title="Change Delivery Location on Google Map"
             >
-              <div className="w-6 h-6 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                 <MapPin className="w-3.5 h-3.5" />
               </div>
-              <div>
-                <p className="text-[10px] text-gray-400 font-bold uppercase leading-none">Deliver to</p>
-                <p className="text-xs font-semibold text-gray-800 max-w-36 truncate leading-tight mt-0.5">
+              <div className="min-w-0">
+                <p className="text-[9px] text-teal-700 font-bold uppercase leading-none tracking-wide">Deliver to</p>
+                <p className="text-xs font-bold text-gray-900 max-w-40 truncate leading-tight mt-0.5">
                   {currentLocation.subLocality || currentLocation.address}
                 </p>
               </div>
-              <ChevronDown className="w-3 h-3 text-gray-400 ml-1" />
+              <ChevronDown className="w-3.5 h-3.5 text-teal-700 ml-0.5 shrink-0 group-hover:translate-y-0.5 transition-transform" />
             </button>
 
             {/* Desktop Search Bar with Dropdown */}
@@ -381,24 +394,33 @@ export default function Header() {
             {/* Row 1: Brand Logo + Quick Call + Cart + Hamburger Toggle */}
             <div className="flex items-center justify-between gap-2">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2 shrink-0">
-                <div className="w-8 h-8 bg-teal-600 rounded-xl flex items-center justify-center shadow-xs shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
+                <Link href="/" className="w-8 h-8 bg-teal-600 rounded-xl flex items-center justify-center shadow-xs shrink-0">
                   <span className="text-white font-poppins font-extrabold text-xs">H&amp;H</span>
-                </div>
+                </Link>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-poppins font-extrabold text-gray-900 text-sm leading-none">
+                    <Link href="/" className="font-poppins font-extrabold text-gray-900 text-sm leading-none hover:text-teal-700">
                       H&amp;H Pharmacy
-                    </p>
+                    </Link>
                     <span className="bg-emerald-100 text-emerald-800 text-[8px] font-bold px-1 py-0.2 rounded uppercase">
                       Govt. Lic
                     </span>
                   </div>
-                  <p className="text-teal-600 text-[10px] font-hindi font-medium leading-none mt-0.5">
-                    दवाईयाँ • Ghookna Mode
-                  </p>
+                  {/* Dynamic location button under mobile logo */}
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationModal(true)}
+                    className="flex items-center gap-1 text-[10px] text-teal-700 font-bold leading-none mt-1 hover:text-teal-900 cursor-pointer"
+                  >
+                    <MapPin className="w-2.5 h-2.5 text-teal-600 shrink-0" />
+                    <span className="truncate max-w-[125px] border-b border-dotted border-teal-400">
+                      {currentLocation.subLocality || 'Ghookna Mode'}
+                    </span>
+                    <ChevronDown className="w-2 h-2 text-gray-400 shrink-0" />
+                  </button>
                 </div>
-              </Link>
+              </div>
 
               {/* Right Quick Controls */}
               <div className="flex items-center gap-1.5 shrink-0">
@@ -438,6 +460,32 @@ export default function Header() {
                   <Menu className="w-4 h-4" />
                 </button>
               </div>
+            </div>
+
+            {/* Row 2: Mobile Quick Location Bar (Blinkit / Zepto style) */}
+            <div className="flex items-center justify-between bg-teal-50/90 border border-teal-200/80 px-2.5 py-1.5 rounded-xl text-xs">
+              <button
+                type="button"
+                onClick={() => setShowLocationModal(true)}
+                className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer"
+              >
+                <div className="w-5 h-5 rounded-md bg-teal-600 text-white flex items-center justify-center shrink-0">
+                  <MapPin className="w-3 h-3" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold text-teal-700 uppercase leading-none">Deliver to</p>
+                  <p className="text-[11px] font-extrabold text-gray-900 truncate leading-tight mt-0.5">
+                    {currentLocation.subLocality || currentLocation.address}
+                  </p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowLocationModal(true)}
+                className="text-[10px] font-bold text-teal-700 bg-white border border-teal-200 px-2 py-0.5 rounded-lg shadow-3xs shrink-0 cursor-pointer hover:bg-teal-50"
+              >
+                Change 🗺️
+              </button>
             </div>
 
             {/* Row 2: Full Width Mobile Search Bar */}

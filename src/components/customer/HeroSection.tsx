@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -15,9 +16,15 @@ import {
   Zap,
   CheckCircle2,
   FileText,
+  MapPin,
 } from 'lucide-react'
+import { useLocationStore } from '@/store/locationStore'
+import { GoogleMapLocationModal } from './GoogleMapLocationModal'
 
 export default function HeroSection() {
+  const { currentLocation } = useLocationStore()
+  const [showMapModal, setShowMapModal] = useState(false)
+
   const quickSearchTags = [
     'Dolo 650',
     'Crocin 650',
@@ -39,10 +46,21 @@ export default function HeroSection() {
           <div className="lg:col-span-7 space-y-3.5 sm:space-y-4">
             {/* Top pill */}
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <div className="inline-flex items-center gap-1.5 bg-teal-100/80 border border-teal-200 text-teal-900 text-[10px] sm:text-xs font-bold px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-2xs">
-                <span className="w-2 h-2 bg-teal-600 rounded-full animate-pulse" />
-                <span>Ghookna Mode, Ghaziabad • Plot No-7</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowMapModal(true)}
+                className="inline-flex items-center gap-1.5 bg-teal-100/90 hover:bg-teal-200 border border-teal-300 text-teal-950 text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full shadow-2xs transition-all cursor-pointer group"
+                title="Change delivery location on Google Map"
+              >
+                <span className="w-2 h-2 bg-teal-600 rounded-full animate-pulse shrink-0" />
+                <MapPin className="w-3.5 h-3.5 text-teal-700 shrink-0" />
+                <span className="truncate max-w-[170px] sm:max-w-none">
+                  Delivering to: <strong>{currentLocation.subLocality || currentLocation.address}</strong>
+                </span>
+                <span className="text-[10px] text-teal-800 underline font-extrabold shrink-0 ml-0.5 group-hover:text-teal-950">
+                  Change 🗺️
+                </span>
+              </button>
               <Link
                 href="/licenses"
                 className="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 text-[10px] sm:text-xs font-bold px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full shadow-2xs transition-colors"
@@ -188,6 +206,12 @@ export default function HeroSection() {
           ))}
         </div>
       </div>
+
+      {/* GOOGLE MAPS LOCATION PICKER MODAL IN HERO */}
+      <GoogleMapLocationModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+      />
     </section>
   )
 }
