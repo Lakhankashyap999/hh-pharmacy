@@ -30,6 +30,7 @@ import { useSession } from 'next-auth/react'
 import Header from '@/components/customer/Header'
 import Footer from '@/components/customer/Footer'
 import toast from 'react-hot-toast'
+import { fileToCompressedDataUrl } from '@/lib/imageCompress'
 
 // Serviceable Ghaziabad delivery pincodes & keywords
 const SERVICEABLE_PINCODES = ['201001', '201002', '201003', '201004', '201005', '201009', '201017']
@@ -53,8 +54,17 @@ const SERVICEABLE_KEYWORDS = [
 export default function CartPage() {
   const router = useRouter()
   const { data: session } = useSession()
-  const { items, removeItem, updateQuantity, updateLooseUnits, clearCart, total, hasPrescriptionRequired } =
-    useCartStore()
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    updateLooseUnits,
+    clearCart,
+    total,
+    hasPrescriptionRequired,
+    prescriptionFile,
+    setPrescription,
+  } = useCartStore()
 
   // Checkout form state
   const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery'>('delivery')
@@ -63,7 +73,8 @@ export default function CartPage() {
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [pincode, setPincode] = useState('201003')
   const [paymentMode, setPaymentMode] = useState<'COD' | 'UPI'>('COD')
-  const [prescriptionUrl, setPrescriptionUrl] = useState<string | null>(null)
+  const prescriptionUrl = prescriptionFile
+  const setPrescriptionUrl = setPrescription
   const [isUploadingRx, setIsUploadingRx] = useState(false)
   const [orderNotes, setOrderNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -98,28 +109,19 @@ export default function CartPage() {
     return false
   }
 
-  // Real prescription upload to server
+  // Prescription upload: compressed in the browser and stored with the order
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file) return
 
     setIsUploadingRx(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      const data = await res.json()
-      if (res.ok && data.url) {
-        setPrescriptionUrl(data.url)
-        toast.success('Prescription uploaded securely! 📋')
-      } else {
-        toast.error(data.error || 'Failed to upload prescription')
-      }
-    } catch {
-      toast.error('Network error during prescription upload')
+      const dataUrl = await fileToCompressedDataUrl(file)
+      setPrescriptionUrl(dataUrl)
+      toast.success('Prescription attached! 📋')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to attach prescription')
     } finally {
       setIsUploadingRx(false)
     }
@@ -365,21 +367,46 @@ export default function CartPage() {
                 </div>
               </div>
 
+              {/* Scan prescription CTA (when no Rx item forces the upload card) */}
+              {!hasRxItems && (
+                <Link
+                  href="/prescription"
+                  className="flex items-center justify-between gap-3 bg-teal-50 border border-teal-200 rounded-2xl p-3 hover:bg-teal-100 transition-colors"
+                >
+                  <span className="flex items-center gap-2.5 text-xs font-bold text-teal-900">
+                    <FileText className="w-5 h-5 text-teal-600 shrink-0" />
+                    Have a prescription? Scan it &amp; add medicines automatically
+                  </span>
+                  <ArrowRight className="w-4 h-4 text-teal-700 shrink-0" />
+                </Link>
+              )}
+
               {/* Prescription Upload Card if required */}
               {hasRxItems && (
-                <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
+                <div className="bg-white rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-xs space-y-4">
                   <h3 className="font-poppins font-bold text-base text-gray-900 flex items-center gap-2">
                     <FileText className="w-5 h-5 text-teal-600" />
                     Upload Doctor's Prescription
                   </h3>
                   <p className="text-xs text-gray-500">
-                    Upload a clear photo of your prescription showing Doctor's name, patient name, and medicines.
+                    Upload a clear photo of your prescription showing Doctor's name, patient name, and medicines.{' '}
+                    <Link href="/prescription" className="text-teal-600 font-bold hover:underline">
+                      Scan &amp; auto-add medicines →
+                    </Link>
                   </p>
 
                   <div className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-teal-400 transition-colors">
                     {prescriptionUrl ? (
                       <div className="space-y-2">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                        {prescriptionUrl.startsWith('data:image') ? (
+                          <img
+                            src={prescriptionUrl}
+                            alt="Attached prescription"
+                            className="w-24 h-28 object-cover rounded-xl border border-gray-200 mx-auto"
+                          />
+                        ) : (
+                          <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                        )}
                         <p className="text-xs font-bold text-gray-800">Prescription Attached ✅</p>
                         <button
                           type="button"
@@ -403,7 +430,7 @@ export default function CartPage() {
                             className="hidden"
                           />
                         </label>
-                        <p className="text-[10px] text-gray-400 mt-1">PNG, JPG, JPEG, or PDF up to 5MB</p>
+                        <p className="text-[10px] text-gray-400 mt-1">Photo (JPG/PNG) up to 8MB, or PDF up to 3MB</p>
                       </div>
                     )}
                   </div>

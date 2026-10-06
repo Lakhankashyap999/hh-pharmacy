@@ -669,7 +669,7 @@ export default function Header() {
                         <span className="text-emerald-500 font-extrabold">Instant</span>
                       </Link>
                       <Link
-                        href="/cart"
+                        href="/prescription"
                         onClick={() => setIsMenuOpen(false)}
                         className="flex items-center justify-between p-2.5 rounded-xl hover:bg-gray-50 text-xs font-bold text-gray-800 transition-colors"
                       >

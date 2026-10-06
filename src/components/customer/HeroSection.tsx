@@ -139,7 +139,7 @@ export default function HeroSection() {
               </div>
 
               <Link
-                href="/cart"
+                href="/prescription"
                 className="w-full bg-white text-teal-900 font-extrabold py-2.5 sm:py-3 px-4 rounded-xl sm:rounded-2xl text-xs flex items-center justify-center gap-2 hover:bg-amber-300 transition-colors shadow-md block text-center"
               >
                 <Upload className="w-3.5 h-3.5" />

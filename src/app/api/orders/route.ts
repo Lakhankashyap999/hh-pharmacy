@@ -186,6 +186,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (data.prescriptionImageUrl) {
+      const rx = String(data.prescriptionImageUrl)
+      const okFormat = /^data:(image\/(jpeg|jpg|png|webp)|application\/pdf);base64,/.test(rx) || /^\/uploads\//.test(rx)
+      if (!okFormat || rx.length > 4_500_000) {
+        return NextResponse.json(
+          { error: 'Prescription file is invalid or too large. Please re-attach a smaller photo.' },
+          { status: 400 }
+        )
+      }
+    }
+
     const deliveryType = data.deliveryType === 'delivery' ? 'delivery' : 'pickup'
     const deliveryFee = deliveryType === 'delivery' ? (calculatedSubtotal > 500 ? 0 : 40) : 0
     const finalTotal = calculatedSubtotal + deliveryFee
@@ -292,7 +303,13 @@ export async function POST(req: NextRequest) {
       )
       .join('\n')
 
-    const whatsappText = `*🔔 NEW ORDER ALERT - H&H Pharmacy*\n\n*Order:* #${orderResult.orderNumber}\n*Customer:* ${data.customerName.trim()} (${data.customerPhone.trim()})\n*Type:* ${deliveryType === 'delivery' ? '60-MIN HOME DELIVERY' : 'SHOP PICKUP'}\n*Address:* ${data.deliveryAddress || 'Ghookna Mode Shop Pickup'}\n*Total:* ₹${finalTotal.toFixed(0)} (${data.paymentMode === 'UPI' ? 'UPI' : 'Cash on Delivery'})\n\n*Items Ordered:*\n${itemsText}${orderResult.prescriptionImageUrl ? `\n\n*Prescription Photo:* ${orderResult.prescriptionImageUrl}` : ''}`
+    const rxNote = orderResult.prescriptionImageUrl
+      ? orderResult.prescriptionImageUrl.startsWith('data:')
+        ? `\n\n*Prescription:* Attached ✅ (view in Admin → Orders → #${orderResult.orderNumber})`
+        : `\n\n*Prescription Photo:* ${orderResult.prescriptionImageUrl}`
+      : ''
+
+    const whatsappText = `*🔔 NEW ORDER ALERT - H&H Pharmacy*\n\n*Order:* #${orderResult.orderNumber}\n*Customer:* ${data.customerName.trim()} (${data.customerPhone.trim()})\n*Type:* ${deliveryType === 'delivery' ? '60-MIN HOME DELIVERY' : 'SHOP PICKUP'}\n*Address:* ${data.deliveryAddress || 'Ghookna Mode Shop Pickup'}\n*Total:* ₹${finalTotal.toFixed(0)} (${data.paymentMode === 'UPI' ? 'UPI' : 'Cash on Delivery'})\n\n*Items Ordered:*\n${itemsText}${rxNote}`
 
     const whatsappDispatchUrl = `https://wa.me/917827558443?text=${encodeURIComponent(whatsappText)}`
 
