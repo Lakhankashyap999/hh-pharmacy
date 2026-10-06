@@ -22,46 +22,49 @@ interface Medicine {
   batches: { currentQuantity: number }[]
 }
 
+import { useAdminCacheStore } from '@/store/adminCacheStore'
+import { AdminFastRefreshBar } from '@/components/admin/AdminFastRefreshBar'
+
 export default function AdminMedicinesPage() {
-  const [medicines, setMedicines] = useState<Medicine[]>([])
+  const {
+    medicines,
+    medicinesTimestamp,
+    loading,
+    refreshing,
+    loadMedicines,
+    toggleMedicineActiveLocal,
+    invalidate,
+  } = useAdminCacheStore()
+
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [bulkLoading, setBulkLoading] = useState(false)
 
   useEffect(() => {
-    fetchMedicines()
-  }, [])
-
-  const fetchMedicines = async () => {
-    try {
-      const res = await fetch('/api/medicines?limit=200')
-      if (res.ok) {
-        const data = await res.json()
-        setMedicines(data.medicines)
-      }
-    } catch {
-      toast.error('Failed to load medicines')
-    } finally {
-      setLoading(false)
-    }
-  }
+    loadMedicines()
+  }, [loadMedicines])
 
   const toggleActive = async (id: number, currentStatus: boolean) => {
+    // Optimistic instant toggle in UI
+    toggleMedicineActiveLocal(id, !currentStatus)
+    toast.success(`Medicine ${!currentStatus ? 'Activated' : 'Deactivated'}`)
+
     try {
       const res = await fetch(`/api/medicines/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isActive: !currentStatus }),
       })
-      if (res.ok) {
-        setMedicines((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, isActive: !currentStatus } : m))
-        )
-        toast.success(`Medicine ${!currentStatus ? 'Activated' : 'Deactivated'}`)
+      if (!res.ok) {
+        // Revert on server error
+        toggleMedicineActiveLocal(id, currentStatus)
+        toast.error('Failed to update status on server')
+      } else {
+        invalidate('stats')
       }
     } catch {
-      toast.error('Failed to update status')
+      toggleMedicineActiveLocal(id, currentStatus)
+      toast.error('Network error updating status')
     }
   }
 
@@ -75,7 +78,7 @@ export default function AdminMedicinesPage() {
         toast.success('Successfully loaded & updated all master Indian medicines! 🎉', { duration: 4000 })
         setBulkLoading(false)
         setShowBulkModal(false)
-        fetchMedicines()
+        loadMedicines(true)
       }, 1500)
     } catch {
       toast.error('Failed to import')
@@ -83,11 +86,11 @@ export default function AdminMedicinesPage() {
     }
   }
 
-  const filtered = medicines.filter((m) => {
+  const filtered = medicines.filter((m: any) => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
-      m.name.toLowerCase().includes(q) ||
+      m.name?.toLowerCase().includes(q) ||
       m.brand?.toLowerCase().includes(q) ||
       m.genericName?.toLowerCase().includes(q) ||
       m.nameHindi?.includes(q)
@@ -106,6 +109,12 @@ export default function AdminMedicinesPage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <AdminFastRefreshBar
+            lastUpdated={medicinesTimestamp}
+            isRefreshing={refreshing.medicines}
+            onRefresh={() => loadMedicines(true)}
+          />
+
           <button
             onClick={() => setShowBulkModal(true)}
             className="inline-flex items-center gap-1.5 bg-white border border-gray-200 text-teal-800 font-bold text-xs py-2.5 px-3.5 rounded-xl hover:bg-teal-50 transition-colors shadow-2xs cursor-pointer"
@@ -139,7 +148,7 @@ export default function AdminMedicinesPage() {
 
       {/* Medicines Table */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
-        {loading ? (
+        {loading.medicines && medicines.length === 0 ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <div key={i} className="h-10 bg-gray-100 skeleton rounded-lg" />
@@ -163,8 +172,8 @@ export default function AdminMedicinesPage() {
               </thead>
 
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((m) => {
-                  const stock = (m.batches || []).reduce((sum, b) => sum + b.currentQuantity, 0)
+                {filtered.map((m: any) => {
+                  const stock = (m.batches || []).reduce((sum: number, b: any) => sum + (b.currentQuantity || 0), 0)
 
                   return (
                     <tr key={m.id} className="hover:bg-gray-50/70 transition-colors">

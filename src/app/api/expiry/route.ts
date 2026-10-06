@@ -25,7 +25,11 @@ export async function GET(req: NextRequest) {
       return { ...b, daysLeft, status }
     })
 
-    return NextResponse.json(categorized)
+    return NextResponse.json(categorized, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=30',
+      },
+    })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch expiry data' }, { status: 500 })
   }

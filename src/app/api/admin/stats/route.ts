@@ -21,6 +21,9 @@ export async function GET(req: NextRequest) {
       pendingOrders,
       expiringBatches,
       expiredBatches,
+      allMedicinesWithStock,
+      recentOrders,
+      expiringSoon,
     ] = await Promise.all([
       prisma.medicine.count(),
       prisma.medicine.count({ where: { isActive: true } }),
@@ -42,15 +45,56 @@ export async function GET(req: NextRequest) {
       prisma.medicineBatch.count({
         where: { expiryDate: { lt: new Date() }, currentQuantity: { gt: 0 } },
       }),
+      // Low stock medicines: lean select of batch quantities only
+      prisma.medicine.findMany({
+        where: { isActive: true },
+        select: {
+          id: true,
+          batches: {
+            where: { expiryDate: { gt: new Date() } },
+            select: { currentQuantity: true },
+          },
+        },
+      }),
+      // Recent orders: lean selection
+      prisma.order.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          orderNumber: true,
+          customerName: true,
+          deliveryType: true,
+          status: true,
+          totalAmount: true,
+          paymentMode: true,
+          createdAt: true,
+          items: {
+            select: {
+              id: true,
+              medicine: { select: { name: true } },
+            },
+          },
+        },
+      }),
+      // Expiring soon: top 5
+      prisma.medicineBatch.findMany({
+        where: {
+          expiryDate: { gt: new Date(), lt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+          currentQuantity: { gt: 0 },
+        },
+        select: {
+          id: true,
+          batchNumber: true,
+          expiryDate: true,
+          currentQuantity: true,
+          medicine: { select: { name: true, brand: true } },
+        },
+        orderBy: { expiryDate: 'asc' },
+        take: 5,
+      }),
     ])
 
-    // Low stock medicines (total units < 10)
-    const allMedicinesWithStock = await prisma.medicine.findMany({
-      where: { isActive: true },
-      include: {
-        batches: { where: { expiryDate: { gt: new Date() } }, select: { currentQuantity: true } },
-      },
-    })
     const lowStockCount = allMedicinesWithStock.filter((m) => {
       const total = m.batches.reduce((a, b) => a + b.currentQuantity, 0)
       return total > 0 && total < 10
@@ -60,38 +104,27 @@ export async function GET(req: NextRequest) {
       return total === 0
     }).length
 
-    // Recent orders
-    const recentOrders = await prisma.order.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      include: { items: { include: { medicine: { select: { name: true } } } } },
-    })
-
-    // Expiring soon list
-    const expiringSoon = await prisma.medicineBatch.findMany({
-      where: {
-        expiryDate: { gt: new Date(), lt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-        currentQuantity: { gt: 0 },
+    return NextResponse.json(
+      {
+        totalMedicines,
+        activeMedicines,
+        totalOrders,
+        todayOrders,
+        todayRevenue: todayRevenue._sum.totalAmount || 0,
+        pendingOrders,
+        lowStockCount,
+        outOfStockCount,
+        expiringBatches,
+        expiredBatches,
+        recentOrders,
+        expiringSoon,
       },
-      include: { medicine: { select: { name: true, brand: true } } },
-      orderBy: { expiryDate: 'asc' },
-      take: 5,
-    })
-
-    return NextResponse.json({
-      totalMedicines,
-      activeMedicines,
-      totalOrders,
-      todayOrders,
-      todayRevenue: todayRevenue._sum.totalAmount || 0,
-      pendingOrders,
-      lowStockCount,
-      outOfStockCount,
-      expiringBatches,
-      expiredBatches,
-      recentOrders,
-      expiringSoon,
-    })
+      {
+        headers: {
+          'Cache-Control': 'private, s-maxage=5, stale-while-revalidate=20',
+        },
+      }
+    )
   } catch (error) {
     console.error('Stats error:', error)
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })

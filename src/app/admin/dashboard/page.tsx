@@ -34,29 +34,17 @@ interface Stats {
   expiringSoon: any[]
 }
 
+import { useAdminCacheStore } from '@/store/adminCacheStore'
+import { AdminFastRefreshBar } from '@/components/admin/AdminFastRefreshBar'
+
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { stats, statsTimestamp, loading, refreshing, loadStats } = useAdminCacheStore()
 
   useEffect(() => {
-    fetchStats()
-  }, [])
+    loadStats()
+  }, [loadStats])
 
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/admin/stats')
-      if (res.ok) {
-        const data = await res.json()
-        setStats(data)
-      }
-    } catch {
-      toast.error('Failed to load dashboard metrics')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
+  if (loading.stats && !stats) {
     return (
       <div className="space-y-6">
         <div className="h-8 w-48 bg-gray-200 rounded-lg skeleton" />
@@ -84,6 +72,11 @@ export default function AdminDashboardPage() {
 
         {/* Quick buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          <AdminFastRefreshBar
+            lastUpdated={statsTimestamp}
+            isRefreshing={refreshing.stats}
+            onRefresh={() => loadStats(true)}
+          />
           <Link
             href="/admin/medicines/add"
             className="inline-flex items-center gap-1.5 bg-teal-600 text-white font-bold text-xs py-2.5 px-4 rounded-xl hover:bg-teal-700 transition-colors shadow-xs"

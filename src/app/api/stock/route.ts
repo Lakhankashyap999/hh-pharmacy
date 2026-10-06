@@ -55,7 +55,11 @@ export async function GET(req: NextRequest) {
       grouped[id].totalUnits += b.currentQuantity
     }
 
-    return NextResponse.json(Object.values(grouped))
+    return NextResponse.json(Object.values(grouped), {
+      headers: {
+        'Cache-Control': 'private, s-maxage=10, stale-while-revalidate=30',
+      },
+    })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: 'Failed to fetch stock' }, { status: 500 })

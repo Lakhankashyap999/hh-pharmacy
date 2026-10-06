@@ -68,7 +68,11 @@ export async function GET(req: NextRequest) {
       take: adminView ? 100 : 20,
     })
 
-    return NextResponse.json(orders)
+    return NextResponse.json(orders, {
+      headers: {
+        'Cache-Control': 'private, s-maxage=5, stale-while-revalidate=15',
+      },
+    })
   } catch (error) {
     console.error('Failed to get orders:', error)
     return NextResponse.json({ error: 'Failed to retrieve orders' }, { status: 500 })

@@ -4,10 +4,20 @@ import { useState, useEffect } from 'react'
 import { Search, Package, Plus, Minus, AlertTriangle, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+import { useAdminCacheStore } from '@/store/adminCacheStore'
+import { AdminFastRefreshBar } from '@/components/admin/AdminFastRefreshBar'
+
 export default function AdminStockPage() {
-  const [stockData, setStockData] = useState<any[]>([])
+  const {
+    stock,
+    stockTimestamp,
+    loading,
+    refreshing,
+    loadStock,
+    invalidate,
+  } = useAdminCacheStore()
+
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [expandedMedicine, setExpandedMedicine] = useState<number | null>(null)
 
   // Adjust modal state
@@ -17,22 +27,8 @@ export default function AdminStockPage() {
   const [adjusting, setAdjusting] = useState(false)
 
   useEffect(() => {
-    fetchStock()
-  }, [])
-
-  const fetchStock = async () => {
-    try {
-      const res = await fetch('/api/stock')
-      if (res.ok) {
-        const data = await res.json()
-        setStockData(data)
-      }
-    } catch {
-      toast.error('Failed to load stock data')
-    } finally {
-      setLoading(false)
-    }
-  }
+    loadStock()
+  }, [loadStock])
 
   const handleAdjust = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +50,9 @@ export default function AdminStockPage() {
       if (res.ok) {
         toast.success('Stock adjusted & logged in audit trail! 📊')
         setSelectedBatch(null)
-        fetchStock()
+        invalidate('stock')
+        invalidate('stats')
+        loadStock(true)
       } else {
         toast.error('Failed to adjust stock')
       }
@@ -65,9 +63,9 @@ export default function AdminStockPage() {
     }
   }
 
-  const filtered = stockData.filter((item) => {
+  const filtered = stock.filter((item: any) => {
     if (!search.trim()) return true
-    return item.medicine.name.toLowerCase().includes(search.toLowerCase())
+    return item.medicine?.name?.toLowerCase().includes(search.toLowerCase())
   })
 
   return (
@@ -79,6 +77,14 @@ export default function AdminStockPage() {
           <p className="text-xs text-gray-500 mt-0.5">
             Audit batch quantities, manage loose tablets, and review stock adjustments
           </p>
+        </div>
+
+        <div>
+          <AdminFastRefreshBar
+            lastUpdated={stockTimestamp}
+            isRefreshing={refreshing.stock}
+            onRefresh={() => loadStock(true)}
+          />
         </div>
       </div>
 
@@ -98,7 +104,7 @@ export default function AdminStockPage() {
 
       {/* Stock Table */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
-        {loading ? (
+        {loading.stock && stock.length === 0 ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-12 bg-gray-100 skeleton rounded-xl" />

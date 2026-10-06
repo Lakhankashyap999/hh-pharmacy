@@ -38,8 +38,26 @@ export async function GET(req: NextRequest) {
     const [medicines, total] = await Promise.all([
       prisma.medicine.findMany({
         where,
-        include: {
-          category: true,
+        select: {
+          id: true,
+          name: true,
+          nameHindi: true,
+          genericName: true,
+          brand: true,
+          manufacturer: true,
+          mrp: true,
+          sellingPrice: true,
+          discountPercent: true,
+          unitType: true,
+          unitsPerPack: true,
+          drugSchedule: true,
+          requiresPrescription: true,
+          imageUrl: true,
+          isActive: true,
+          categoryId: true,
+          category: {
+            select: { id: true, name: true, nameHindi: true, color: true, icon: true },
+          },
           batches: {
             where: { expiryDate: { gt: new Date() } },
             select: { currentQuantity: true, expiryDate: true },
@@ -53,9 +71,17 @@ export async function GET(req: NextRequest) {
       prisma.medicine.count({ where }),
     ])
 
-    return NextResponse.json({ medicines, total, page, pages: Math.ceil(total / limit) })
+    return NextResponse.json(
+      { medicines, total, page, pages: Math.ceil(total / limit) },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=60',
+        },
+      }
+    )
   } catch (error) {
-    console.error(error)
+    console.error('Failed to fetch medicines:', error)
+    return NextResponse.json({ error: 'Failed to fetch medicines' }, { status: 500 })
   }
 }
 

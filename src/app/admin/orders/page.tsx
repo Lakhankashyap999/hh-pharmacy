@@ -15,66 +15,69 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+import { useAdminCacheStore } from '@/store/adminCacheStore'
+import { AdminFastRefreshBar } from '@/components/admin/AdminFastRefreshBar'
+
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    orders,
+    ordersTimestamp,
+    loading,
+    refreshing,
+    loadOrders,
+    updateOrderStatusLocal,
+    updatePrescriptionStatusLocal,
+    invalidate,
+  } = useAdminCacheStore()
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedRx, setSelectedRx] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
-
-  const fetchOrders = async () => {
-    try {
-      const res = await fetch('/api/orders?admin=true')
-      if (res.ok) {
-        const data = await res.json()
-        setOrders(data)
-      }
-    } catch {
-      toast.error('Failed to load orders')
-    } finally {
-      setLoading(false)
-    }
-  }
+    loadOrders()
+  }, [loadOrders])
 
   const updateOrderStatus = async (orderId: number, newStatus: string) => {
+    // Optimistic instant UI update
+    updateOrderStatusLocal(orderId, newStatus)
+    toast.success(`Order #${orderId} marked as ${newStatus}!`)
+
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
       })
-      if (res.ok) {
-        toast.success(`Order #${orderId} marked as ${newStatus}!`)
-        setOrders((prev) =>
-          prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
-        )
+      if (!res.ok) {
+        toast.error('Failed to update status on server')
+        loadOrders(true)
+      } else {
+        invalidate('stats')
       }
     } catch {
-      toast.error('Failed to update status')
+      toast.error('Network error updating status')
+      loadOrders(true)
     }
   }
 
   const approvePrescription = async (orderId: number) => {
+    updatePrescriptionStatusLocal(orderId, 'approved')
+    toast.success('Doctor Prescription Approved! ✅')
+    setSelectedRx(null)
+
     try {
       const res = await fetch(`/api/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prescriptionStatus: 'approved' }),
       })
-      if (res.ok) {
-        toast.success('Doctor Prescription Approved! ✅')
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === orderId ? { ...o, prescriptionStatus: 'approved' } : o
-          )
-        )
-        setSelectedRx(null)
+      if (!res.ok) {
+        toast.error('Failed to approve Rx on server')
+        loadOrders(true)
       }
     } catch {
-      toast.error('Failed to approve Rx')
+      toast.error('Network error approving Rx')
+      loadOrders(true)
     }
   }
 
@@ -86,13 +89,23 @@ export default function AdminOrdersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-poppins font-bold text-2xl text-gray-900">
-          Customer Orders Management
-        </h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Process delivery/pickup requests, inspect doctor prescriptions, and manage order fulfillment
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-poppins font-bold text-2xl text-gray-900">
+            Customer Orders Management
+          </h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Process delivery/pickup requests, inspect doctor prescriptions, and manage order fulfillment
+          </p>
+        </div>
+
+        <div>
+          <AdminFastRefreshBar
+            lastUpdated={ordersTimestamp}
+            isRefreshing={refreshing.orders}
+            onRefresh={() => loadOrders(true)}
+          />
+        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -121,7 +134,7 @@ export default function AdminOrdersPage() {
 
       {/* Orders List */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
-        {loading ? (
+        {loading.orders && orders.length === 0 ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 bg-gray-100 skeleton rounded-xl" />

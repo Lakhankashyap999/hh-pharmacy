@@ -19,28 +19,24 @@ interface ExpiryItem {
   }
 }
 
+import { useAdminCacheStore } from '@/store/adminCacheStore'
+import { AdminFastRefreshBar } from '@/components/admin/AdminFastRefreshBar'
+
 export default function AdminExpiryPage() {
-  const [expiryItems, setExpiryItems] = useState<ExpiryItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const {
+    expiry,
+    expiryTimestamp,
+    loading,
+    refreshing,
+    loadExpiry,
+    invalidate,
+  } = useAdminCacheStore()
+
   const [activeTab, setActiveTab] = useState<'all' | 'expired' | 'critical' | 'warning'>('all')
 
   useEffect(() => {
-    fetchExpiry()
-  }, [])
-
-  const fetchExpiry = async () => {
-    try {
-      const res = await fetch('/api/expiry')
-      if (res.ok) {
-        const data = await res.json()
-        setExpiryItems(data)
-      }
-    } catch {
-      toast.error('Failed to load expiry data')
-    } finally {
-      setLoading(false)
-    }
-  }
+    loadExpiry()
+  }, [loadExpiry])
 
   const handleDisposal = async (batchId: number, medicineId: number, qty: number) => {
     if (!confirm('Are you sure you want to remove and dispose of this expired batch from inventory?')) return
@@ -59,30 +55,43 @@ export default function AdminExpiryPage() {
 
       if (res.ok) {
         toast.success('Expired batch removed from stock and logged in disposal record! 🗑️')
-        fetchExpiry()
+        invalidate('expiry')
+        invalidate('stock')
+        invalidate('stats')
+        loadExpiry(true)
       }
     } catch {
       toast.error('Failed to dispose batch')
     }
   }
 
-  const filtered = expiryItems.filter((item) => {
+  const filtered = expiry.filter((item: any) => {
     if (activeTab === 'all') return true
     return item.status === activeTab
   })
 
-  const expiredCount = expiryItems.filter((i) => i.status === 'expired').length
-  const criticalCount = expiryItems.filter((i) => i.status === 'critical').length
-  const warningCount = expiryItems.filter((i) => i.status === 'warning').length
+  const expiredCount = expiry.filter((i: any) => i.status === 'expired').length
+  const criticalCount = expiry.filter((i: any) => i.status === 'critical').length
+  const warningCount = expiry.filter((i: any) => i.status === 'warning').length
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-poppins font-bold text-2xl text-gray-900">Medicine Expiry Tracking</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Automatic early warning system for upcoming and expired medicine batches (FIFO priority)
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-poppins font-bold text-2xl text-gray-900">Medicine Expiry Tracking</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Automatic early warning system for upcoming and expired medicine batches (FIFO priority)
+          </p>
+        </div>
+
+        <div>
+          <AdminFastRefreshBar
+            lastUpdated={expiryTimestamp}
+            isRefreshing={refreshing.expiry}
+            onRefresh={() => loadExpiry(true)}
+          />
+        </div>
       </div>
 
       {/* Tabs */}
@@ -95,7 +104,7 @@ export default function AdminExpiryPage() {
               : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
           }`}
         >
-          All Monitored ({expiryItems.length})
+          All Monitored ({expiry.length})
         </button>
 
         <button
@@ -134,7 +143,7 @@ export default function AdminExpiryPage() {
 
       {/* Expiry Items List */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-xs overflow-hidden">
-        {loading ? (
+        {loading.expiry && expiry.length === 0 ? (
           <div className="p-8 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-12 bg-gray-100 skeleton rounded-xl" />
