@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/serverAuth'
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
+    const adminAuth = await requireAdmin()
+    if (!adminAuth.authorized) return adminAuth.response!
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const todayEnd = new Date()
@@ -90,7 +93,7 @@ export async function GET(req: NextRequest) {
       expiringSoon,
     })
   } catch (error) {
-    console.error(error)
+    console.error('Stats error:', error)
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })
   }
 }

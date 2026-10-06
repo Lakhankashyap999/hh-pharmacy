@@ -50,9 +50,20 @@ export default async function OrderConfirmationPage({ params }: { params: Promis
       ? -1
       : statusSteps.findIndex((s) => s.key === order.status)
 
-  const whatsappMessage = encodeURIComponent(
-    `Hello H&H Pharmacy! I have placed Order #${order.orderNumber} for ₹${order.totalAmount}. Please confirm.`
-  )
+  const itemsList = order.items
+    .map(
+      (item) =>
+        `• ${item.medicine.name} (${
+          item.quantityType === 'loose_units'
+            ? `${item.looseUnitCount} Loose Tablets`
+            : `${item.quantity} Strip(s)`
+        }) - ₹${item.totalPrice.toFixed(0)}`
+    )
+    .join('\n')
+
+  const fullWhatsappText = `*🔔 Order Confirmation - H&H Pharmacy*\n\n*Order:* #${order.orderNumber}\n*Customer:* ${order.customerName} (${order.customerPhone})\n*Total:* ₹${order.totalAmount.toFixed(0)} (${order.paymentMode})\n*Delivery:* ${order.deliveryType.toUpperCase()}\n*Address:* ${order.deliveryAddress || 'Shop Pickup'}\n\n*Items:*\n${itemsList}${order.prescriptionImageUrl ? `\n\n*Prescription:* ${order.prescriptionImageUrl}` : ''}\n\nPlease confirm my order!`
+
+  const whatsappMessage = encodeURIComponent(fullWhatsappText)
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-between">

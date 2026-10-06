@@ -61,29 +61,6 @@ function LoginContent() {
     }
   }
 
-  // Handle 1-Click Demo Customer Login
-  const handleDemoLogin = async () => {
-    setLoading(true)
-    try {
-      const res = await signIn('customer-credentials', {
-        redirect: false,
-        email: 'rahul.demo@gmail.com',
-        password: 'demo123',
-      })
-
-      if (res?.error) {
-        toast.error('Demo login failed')
-      } else {
-        toast.success('Logged in as Rahul Sharma (Demo Customer) 🎉')
-        router.push(callbackUrl)
-      }
-    } catch {
-      toast.error('Demo login error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   // Handle new customer registration
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -167,24 +144,6 @@ function LoginContent() {
           }`}
         >
           New Account (Sign Up)
-        </button>
-      </div>
-
-      {/* 1-Click Fast Demo Login Pill */}
-      <div className="bg-teal-50 border border-teal-200 rounded-2xl p-3 text-left flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold text-teal-950 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-            Instant Test Login
-          </p>
-          <p className="text-[10px] text-teal-800">Test order history &amp; cart without typing</p>
-        </div>
-        <button
-          onClick={handleDemoLogin}
-          disabled={loading}
-          className="px-3.5 py-1.5 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
-        >
-          1-Click Login
         </button>
       </div>
 

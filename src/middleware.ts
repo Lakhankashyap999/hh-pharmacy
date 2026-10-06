@@ -1,25 +1,34 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname
-  const isAuth =
-    req.cookies.get('next-auth.session-token') ||
-    req.cookies.get('__Secure-next-auth.session-token') ||
-    req.cookies.get('authjs.session-token')
+  const secret = process.env.NEXTAUTH_SECRET || 'hh-secret-fallback-key'
+  const token = await getToken({ req, secret })
 
-  // Protect admin routes except login
-  if (path.startsWith('/admin') && path !== '/admin/login') {
-    if (!isAuth) {
-      // In dev mode allow direct access or redirect
-      // return NextResponse.redirect(new URL('/admin/login', req.url))
+  // Protect admin routes
+  if (path.startsWith('/admin')) {
+    if (path === '/admin/login') {
+      if (token && (token as any).role === 'admin') {
+        return NextResponse.redirect(new URL('/admin/dashboard', req.url))
+      }
+      return NextResponse.next()
+    }
+
+    if (!token || (token as any).role !== 'admin') {
+      const loginUrl = new URL('/admin/login', req.url)
+      loginUrl.searchParams.set('callbackUrl', path)
+      return NextResponse.redirect(loginUrl)
     }
   }
 
-  // Protect account routes
+  // Protect customer account routes
   if (path.startsWith('/account')) {
-    if (!isAuth) {
-      return NextResponse.redirect(new URL('/auth/login', req.url))
+    if (!token) {
+      const loginUrl = new URL('/auth/login', req.url)
+      loginUrl.searchParams.set('callbackUrl', path)
+      return NextResponse.redirect(loginUrl)
     }
   }
 

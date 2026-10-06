@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/serverAuth'
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,31 +50,41 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(Object.values(grouped))
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch stock' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { batchId, medicineId, change, reason } = await req.json()
+    const adminAuth = await requireAdmin()
+    if (!adminAuth.authorized) return adminAuth.response!
+
+    const body = await req.json()
+    const { batchId, medicineId, change, reason, batchNumber, expiryDate, purchasePrice } = body
+
+    const qtyChange = parseInt(change) || 0
+    if (qtyChange === 0) {
+      return NextResponse.json({ error: 'Quantity change cannot be zero' }, { status: 400 })
+    }
 
     if (batchId) {
-      const batch = await prisma.medicineBatch.findUnique({ where: { id: batchId } })
+      const batch = await prisma.medicineBatch.findUnique({ where: { id: parseInt(batchId) } })
       if (!batch) return NextResponse.json({ error: 'Batch not found' }, { status: 404 })
 
       const before = batch.currentQuantity
-      const after = Math.max(0, before + parseInt(change))
+      const after = Math.max(0, before + qtyChange)
 
       await prisma.medicineBatch.update({
-        where: { id: batchId },
+        where: { id: parseInt(batchId) },
         data: { currentQuantity: after },
       })
+
       await prisma.stockLog.create({
         data: {
-          medicineId,
-          batchId,
+          medicineId: batch.medicineId,
+          batchId: batch.id,
           action: 'adjustment',
-          quantityChange: parseInt(change),
+          quantityChange: qtyChange,
           quantityBefore: before,
           quantityAfter: after,
           reference: reason || 'Manual adjustment',
@@ -81,31 +92,50 @@ export async function POST(req: NextRequest) {
       })
       return NextResponse.json({ success: true, before, after })
     } else {
-      // Create new batch if no batchId provided
+      const parsedMedId = parseInt(medicineId)
+      if (isNaN(parsedMedId)) {
+        return NextResponse.json({ error: 'Invalid medicine ID' }, { status: 400 })
+      }
+
+      // Safe date parser
+      let parsedExpiry = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000)
+      if (expiryDate) {
+        const testDate = new Date(expiryDate)
+        if (!isNaN(testDate.getTime())) {
+          parsedExpiry = testDate
+        }
+      }
+
+      const generatedBatchNum =
+        batchNumber?.trim() || `BATCH-M${parsedMedId}-${Date.now().toString().slice(-6)}`
+
       const newBatch = await prisma.medicineBatch.create({
         data: {
-          medicineId,
-          batchNumber: `BATCH-M${medicineId}-${new Date().getFullYear()}`,
-          expiryDate: new Date('2028-12-31'),
-          totalQuantity: parseInt(change),
-          currentQuantity: parseInt(change),
+          medicineId: parsedMedId,
+          batchNumber: generatedBatchNum,
+          expiryDate: parsedExpiry,
+          totalQuantity: Math.max(1, qtyChange),
+          currentQuantity: Math.max(1, qtyChange),
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
         },
       })
+
       await prisma.stockLog.create({
         data: {
-          medicineId,
+          medicineId: parsedMedId,
           batchId: newBatch.id,
           action: 'restock',
-          quantityChange: parseInt(change),
+          quantityChange: qtyChange,
           quantityBefore: 0,
-          quantityAfter: parseInt(change),
-          reference: reason || 'New batch intake',
+          quantityAfter: qtyChange,
+          reference: reason || `New batch ${generatedBatchNum} intake`,
         },
       })
-      return NextResponse.json({ success: true, batch: newBatch })
+
+      return NextResponse.json({ success: true, batch: newBatch }, { status: 201 })
     }
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('Stock adjustment error:', error)
+    return NextResponse.json({ error: 'Failed to adjust stock' }, { status: 500 })
   }
 }

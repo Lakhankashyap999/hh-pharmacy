@@ -92,7 +92,7 @@ export default function Header() {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
-              <strong className="font-semibold">Superfast 15-30 Mins Delivery</strong> in Ghaziabad
+              <strong className="font-semibold">60-Min Fast Home Delivery</strong> in Ghaziabad
             </span>
             <span className="hidden sm:flex items-center gap-1 text-teal-100">
               <Phone className="w-3 h-3" />
@@ -354,7 +354,7 @@ export default function Header() {
               <MapPin className="w-4 h-4 text-teal-600" /> Set Delivery Location
             </h3>
             <p className="text-xs text-gray-500">
-              We deliver in 15-30 minutes across Ghaziabad &amp; nearby areas.
+              We deliver in 60 minutes across Ghaziabad &amp; nearby areas.
             </p>
 
             <div className="space-y-2">

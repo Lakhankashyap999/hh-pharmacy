@@ -177,13 +177,21 @@ export default function AdminOrdersPage() {
                 </div>
 
                 {/* Customer Details */}
-                <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+                <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
                   <span className="font-medium text-gray-900">Customer: {order.customerName}</span>
                   <a
                     href={`tel:${order.customerPhone}`}
                     className="flex items-center gap-1 text-teal-600 hover:underline"
                   >
                     <Phone className="w-3.5 h-3.5" /> {order.customerPhone}
+                  </a>
+                  <a
+                    href={`https://wa.me/91${order.customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Namaste ${order.customerName}! Your H&H Pharmacy order #${order.orderNumber} is currently: ${order.status.toUpperCase()}. Total: ₹${order.totalAmount}. Call/reply if you need assistance!`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg font-semibold hover:bg-emerald-100 transition-colors"
+                  >
+                    💬 WhatsApp Customer
                   </a>
                   <span>Address: {order.deliveryAddress}</span>
                 </div>

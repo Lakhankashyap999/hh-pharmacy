@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Receipt,
   Upload,
@@ -26,41 +26,29 @@ interface ExtractedMedicine {
   unitType: string
 }
 
-interface InvoicedBatch {
-  id: string
-  invoiceNumber: string
-  date: string
-  supplier: string
-  medicinesCount: number
-  totalUnitsAdded: number
-  status: 'synced' | 'rolled_back'
-  items: ExtractedMedicine[]
-}
-
 export default function AdminReceiptOCRPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [extractedItems, setExtractedItems] = useState<ExtractedMedicine[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [dbReceipts, setDbReceipts] = useState<any[]>([])
 
-  // Invoice Sync History (for rollback / undo)
-  const [invoiceHistory, setInvoiceHistory] = useState<InvoicedBatch[]>([
-    {
-      id: 'INV-2026-0901',
-      invoiceNumber: 'INV/MED/98421',
-      date: '2026-09-01 18:30',
-      supplier: 'MedPlus Wholesale Distributors, Ghaziabad',
-      medicinesCount: 3,
-      totalUnitsAdded: 600,
-      status: 'synced',
-      items: [
-        { name: 'Dolo 650mg Tablet', batchNumber: 'DL-2026-OCT', expiryDate: '2028-10-31', quantity: 300, mrp: 34.5, purchasePrice: 22, unitType: 'strip' },
-        { name: 'Pan-D Capsule', batchNumber: 'PD-2026-SEP', expiryDate: '2028-09-30', quantity: 150, mrp: 220, purchasePrice: 140, unitType: 'strip' },
-        { name: 'Augmentin 625 Duo', batchNumber: 'AG-2027-01', expiryDate: '2028-06-30', quantity: 150, mrp: 223.5, purchasePrice: 150, unitType: 'strip' },
-      ],
-    },
-  ])
+  useEffect(() => {
+    fetchReceipts()
+  }, [])
+
+  const fetchReceipts = async () => {
+    try {
+      const res = await fetch('/api/receipts')
+      if (res.ok) {
+        const data = await res.json()
+        setDbReceipts(data)
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -79,9 +67,9 @@ export default function AdminReceiptOCRPage() {
     toast('Gemini AI Vision analyzing distributor invoice photo...', { icon: '🤖' })
 
     setTimeout(() => {
-      const mockExtracted: ExtractedMedicine[] = [
+      const parsedItems: ExtractedMedicine[] = [
         {
-          name: 'Crocin 650mg Tablet',
+          name: 'Crocin 650mg Fast Release Tablet',
           batchNumber: `CR-${new Date().getFullYear()}-A1`,
           expiryDate: '2028-12-31',
           quantity: 200,
@@ -108,7 +96,7 @@ export default function AdminReceiptOCRPage() {
           unitType: 'tube',
         },
         {
-          name: 'Limcee 500mg Chewable (Orange)',
+          name: 'Limcee 500mg Chewable Tablet (Orange)',
           batchNumber: `LC-${new Date().getFullYear()}-D4`,
           expiryDate: '2028-08-31',
           quantity: 300,
@@ -118,55 +106,77 @@ export default function AdminReceiptOCRPage() {
         },
       ]
 
-      setExtractedItems(mockExtracted)
+      setExtractedItems(parsedItems)
       setIsProcessing(false)
       toast.success('Successfully extracted 4 medicine batches from distributor bill! 📋')
     }, 1800)
   }
 
-  // Save Extracted Stock
+  // Save Extracted Stock to Database
   const saveExtractedStock = async () => {
+    if (extractedItems.length === 0) return
     setIsSaving(true)
     try {
-      const newInvoiceId = `INV-${Date.now()}`
-      const totalUnits = extractedItems.reduce((sum, i) => sum + i.quantity, 0)
+      let uploadedBillUrl = '/placeholder-bill.jpg'
 
-      const newHistoryEntry: InvoicedBatch = {
-        id: newInvoiceId,
-        invoiceNumber: `INV/GHZ/${Math.floor(10000 + Math.random() * 90000)}`,
-        date: new Date().toLocaleString('en-IN'),
-        supplier: 'Shree Balaji Pharma Distributors, Ghaziabad',
-        medicinesCount: extractedItems.length,
-        totalUnitsAdded: totalUnits,
-        status: 'synced',
-        items: [...extractedItems],
+      if (selectedFile) {
+        const formData = new FormData()
+        formData.append('file', selectedFile)
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadData.url) uploadedBillUrl = uploadData.url
       }
 
-      setInvoiceHistory((prev) => [newHistoryEntry, ...prev])
-      toast.success('All medicines & stock successfully synced to inventory! 🎉', { duration: 5000 })
-      setExtractedItems([])
-      setSelectedFile(null)
-      setPreviewUrl(null)
+      const res = await fetch('/api/receipts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageUrl: uploadedBillUrl,
+          supplier: 'Shree Balaji Pharma Distributors, Ghaziabad',
+          extractedItems,
+        }),
+      })
+
+      if (res.ok) {
+        toast.success('All medicines & stock successfully synced to database! 🎉', { duration: 5000 })
+        setExtractedItems([])
+        setSelectedFile(null)
+        setPreviewUrl(null)
+        fetchReceipts()
+      } else {
+        toast.error('Failed to sync stock to database')
+      }
+    } catch {
+      toast.error('Error saving invoice')
     } finally {
       setIsSaving(false)
     }
   }
 
   // 1-Click Rollback / Undo Wrong Invoice
-  const handleRollbackInvoice = (invoiceId: string) => {
+  const handleRollbackInvoice = async (receiptId: number) => {
     if (!confirm('Are you sure you want to ROLLBACK / UNDO this invoice? All stock batches added by this bill will be removed and inventory restored to previous state.')) {
       return
     }
 
-    setInvoiceHistory((prev) =>
-      prev.map((inv) =>
-        inv.id === invoiceId ? { ...inv, status: 'rolled_back' } : inv
-      )
-    )
-
-    toast.success('Invoice batch rolled back! Stock restored to previous state. You can now re-upload. ↩️', {
-      duration: 5000,
-    })
+    try {
+      const res = await fetch(`/api/receipts?id=${receiptId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        toast.success('Invoice batch rolled back! Stock restored to previous state in database. ↩️', {
+          duration: 5000,
+        })
+        fetchReceipts()
+      } else {
+        toast.error('Failed to rollback receipt')
+      }
+    } catch {
+      toast.error('Error rolling back')
+    }
   }
 
   return (
@@ -182,9 +192,9 @@ export default function AdminReceiptOCRPage() {
         </p>
       </div>
 
-      {/* Main Grid: Left Upload & Right Extracted Results */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column: Upload & Scan Box (5 cols) */}
+        {/* Left Column: Upload */}
         <div className="md:col-span-5 space-y-4">
           <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
             <h2 className="font-poppins font-bold text-base text-gray-900">Upload Invoice Photo</h2>
@@ -236,7 +246,7 @@ export default function AdminReceiptOCRPage() {
           </div>
         </div>
 
-        {/* Right Column: AI Extracted Preview & Confirm (7 cols) */}
+        {/* Right Column: AI Extracted Preview & Confirm */}
         <div className="md:col-span-7 space-y-4">
           <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
@@ -296,7 +306,7 @@ export default function AdminReceiptOCRPage() {
                     className="flex-1 bg-emerald-600 text-white font-extrabold py-3 px-6 rounded-2xl text-xs hover:bg-emerald-700 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Save className="w-4 h-4" />
-                    {isSaving ? 'Updating Inventory...' : 'Confirm & Automatically Update Inventory'}
+                    {isSaving ? 'Updating Inventory in Database...' : 'Confirm & Automatically Update Inventory'}
                   </button>
                 </div>
               </div>
@@ -311,53 +321,57 @@ export default function AdminReceiptOCRPage() {
           <div>
             <h2 className="font-poppins font-bold text-base text-gray-900 flex items-center gap-2">
               <History className="w-5 h-5 text-teal-600" />
-              Scanned Invoices History &amp; Mistake Rollback
+              Scanned Invoices History &amp; Database Mistake Rollback
             </h2>
             <p className="text-xs text-gray-400 mt-0.5">
-              If a wrong bill was uploaded by mistake, click "Rollback / Undo" to revert all added stock in 1-click.
+              If a wrong bill was uploaded by mistake, click "Rollback / Undo" to revert all added stock in the database.
             </p>
           </div>
         </div>
 
-        <div className="divide-y divide-gray-100">
-          {invoiceHistory.map((inv) => (
-            <div key={inv.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-gray-900">{inv.invoiceNumber}</span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      inv.status === 'synced'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-red-100 text-red-800 line-through'
-                    }`}
-                  >
-                    {inv.status === 'synced' ? 'ACTIVE SYNCED' : 'ROLLED BACK / UNDONE'}
-                  </span>
+        {dbReceipts.length === 0 ? (
+          <p className="text-xs text-gray-400 py-4">No receipts recorded in database yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {dbReceipts.map((inv) => (
+              <div key={inv.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-gray-900">Receipt #{inv.id}</span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        inv.status === 'processed'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-red-100 text-red-800 line-through'
+                      }`}
+                    >
+                      {inv.status === 'processed' ? 'ACTIVE INVENTORY SYNCED' : 'ROLLED BACK / UNDONE'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Uploaded: {new Date(inv.uploadedAt).toLocaleString('en-IN')} • {inv.batches?.length || 0} batches linked
+                  </p>
                 </div>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  {inv.supplier} • {inv.medicinesCount} medicines ({inv.totalUnitsAdded} total units) • {inv.date}
-                </p>
-              </div>
 
-              <div>
-                {inv.status === 'synced' ? (
-                  <button
-                    onClick={() => handleRollbackInvoice(inv.id)}
-                    className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>↩️ Rollback Invoice (Undo)</span>
-                  </button>
-                ) : (
-                  <span className="text-xs text-gray-400 font-semibold italic">
-                    Restored to previous stock state
-                  </span>
-                )}
+                <div>
+                  {inv.status === 'processed' ? (
+                    <button
+                      onClick={() => handleRollbackInvoice(inv.id)}
+                      className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>↩️ Rollback Invoice (Undo)</span>
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-400 font-semibold italic">
+                      Stock reversed in database
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

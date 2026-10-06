@@ -5,89 +5,90 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 
+const providers: any[] = []
+
+// Only enable Google Provider if valid credentials exist in env
+if (
+  process.env.GOOGLE_CLIENT_ID &&
+  process.env.GOOGLE_CLIENT_SECRET &&
+  !process.env.GOOGLE_CLIENT_ID.includes('dummy')
+) {
+  providers.push(
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  )
+}
+
+providers.push(
+  CredentialsProvider({
+    id: 'customer-credentials',
+    name: 'Customer Login',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) return null
+      const cleanEmail = credentials.email.trim().toLowerCase()
+
+      const user = await prisma.user.findUnique({
+        where: { email: cleanEmail },
+      })
+
+      if (!user) return null
+
+      // If user signed up with OAuth and has no password set, reject credentials login
+      if (!user.passwordHash) {
+        return null
+      }
+
+      const isValid = await bcrypt.compare(credentials.password, user.passwordHash)
+      if (!isValid) return null
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: 'customer',
+      } as any
+    },
+  }),
+  CredentialsProvider({
+    id: 'admin-credentials',
+    name: 'Admin Login',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) return null
+      const cleanEmail = credentials.email.trim().toLowerCase()
+
+      const admin = await prisma.admin.findUnique({
+        where: { email: cleanEmail },
+      })
+      if (!admin) return null
+
+      const isValid = await bcrypt.compare(credentials.password, admin.passwordHash)
+      if (!isValid) return null
+
+      return {
+        id: `admin_${admin.id}`,
+        name: admin.name,
+        email: admin.email,
+        role: 'admin',
+        adminRole: admin.role,
+      } as any
+    },
+  })
+)
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || 'dummy-google-client-id',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'dummy-google-client-secret',
-    }),
-    CredentialsProvider({
-      id: 'customer-credentials',
-      name: 'Customer Login',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email) return null
-        const cleanEmail = credentials.email.trim().toLowerCase()
-
-        // Check if demo login
-        if (cleanEmail === 'rahul.demo@gmail.com' && credentials.password === 'demo123') {
-          let demoUser = await prisma.user.findUnique({ where: { email: cleanEmail } })
-          if (!demoUser) {
-            demoUser = await prisma.user.create({
-              data: {
-                name: 'Rahul Sharma (Demo Customer)',
-                email: cleanEmail,
-                phone: '9876543210',
-              },
-            })
-          }
-          return {
-            id: demoUser.id,
-            name: demoUser.name,
-            email: demoUser.email,
-            role: 'customer',
-          } as any
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: cleanEmail },
-        })
-
-        if (!user) return null
-
-        if (user.passwordHash && credentials.password) {
-          const isValid = await bcrypt.compare(credentials.password, user.passwordHash)
-          if (!isValid) return null
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          role: 'customer',
-        } as any
-      },
-    }),
-    CredentialsProvider({
-      id: 'admin-credentials',
-      name: 'Admin Login',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
-        const admin = await prisma.admin.findUnique({
-          where: { email: credentials.email },
-        })
-        if (!admin) return null
-        const isValid = await bcrypt.compare(credentials.password, admin.passwordHash)
-        if (!isValid) return null
-        return {
-          id: `admin_${admin.id}`,
-          name: admin.name,
-          email: admin.email,
-          role: 'admin',
-          adminRole: admin.role,
-        } as any
-      },
-    }),
-  ],
+  providers,
   session: { strategy: 'jwt' },
   callbacks: {
     async jwt({ token, user, account }: any) {
@@ -112,7 +113,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/login',
-    error: '/auth/error',
+    error: '/auth/login',
   },
   secret: process.env.NEXTAUTH_SECRET || 'hh-secret-fallback-key',
 }

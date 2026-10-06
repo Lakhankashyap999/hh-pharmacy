@@ -139,6 +139,8 @@ export default function EditMedicinePage({ params }: { params: { id: string } })
           medicineId,
           batchId: null,
           change: parseInt(newBatchQty),
+          batchNumber: newBatchNumber.trim(),
+          expiryDate: newBatchExpiry,
           reason: `New batch ${newBatchNumber}`,
         }),
       })

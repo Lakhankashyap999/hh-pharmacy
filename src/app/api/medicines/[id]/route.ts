@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/serverAuth'
 
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params
     const medicineId = parseInt(id)
+    if (isNaN(medicineId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+
     const medicine = await prisma.medicine.findUnique({
       where: { id: medicineId },
       include: {
@@ -27,8 +30,13 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const adminAuth = await requireAdmin()
+    if (!adminAuth.authorized) return adminAuth.response!
+
     const { id } = await context.params
     const medicineId = parseInt(id)
+    if (isNaN(medicineId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+
     const data = await req.json()
     const medicine = await prisma.medicine.update({
       where: { id: medicineId },
@@ -57,17 +65,22 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
     })
     return NextResponse.json(medicine)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to update medicine' }, { status: 500 })
   }
 }
 
 export async function DELETE(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
+    const adminAuth = await requireAdmin()
+    if (!adminAuth.authorized) return adminAuth.response!
+
     const { id } = await context.params
     const medicineId = parseInt(id)
+    if (isNaN(medicineId)) return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+
     await prisma.medicine.update({ where: { id: medicineId }, data: { isActive: false } })
     return NextResponse.json({ success: true })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to delete medicine' }, { status: 500 })
   }
 }

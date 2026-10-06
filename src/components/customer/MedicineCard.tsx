@@ -102,7 +102,7 @@ export function MedicineCard({ medicine, index = 0 }: { medicine: Medicine; inde
           <div className="flex items-center justify-between mb-2">
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-600 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
               <Zap className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
-              15 MINS
+              60 MINS
             </span>
 
             {medicine.discountPercent > 0 ? (

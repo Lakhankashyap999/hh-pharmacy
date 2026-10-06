@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -76,6 +76,15 @@ export default function CartPage() {
   const finalPayable = cartTotal + deliveryFee
   const hasRxItems = hasPrescriptionRequired()
 
+  const [queueStatus, setQueueStatus] = useState<any>(null)
+
+  useEffect(() => {
+    fetch('/api/orders?queue=true')
+      .then((res) => res.json())
+      .then((data) => setQueueStatus(data))
+      .catch(() => {})
+  }, [])
+
   // Verify delivery location serviceable
   const checkServiceableLocation = (addr: string, pin: string) => {
     const cleanPin = pin.trim()
@@ -89,17 +98,31 @@ export default function CartPage() {
     return false
   }
 
-  // Simulated prescription upload
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Real prescription upload to server
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setIsUploadingRx(true)
-    setTimeout(() => {
-      setPrescriptionUrl(URL.createObjectURL(file))
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+      if (res.ok && data.url) {
+        setPrescriptionUrl(data.url)
+        toast.success('Prescription uploaded securely! 📋')
+      } else {
+        toast.error(data.error || 'Failed to upload prescription')
+      }
+    } catch {
+      toast.error('Network error during prescription upload')
+    } finally {
       setIsUploadingRx(false)
-      toast.success('Prescription uploaded successfully! 📋')
-    }, 1200)
+    }
   }
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
@@ -140,6 +163,7 @@ export default function CartPage() {
         userId: (session?.user as any)?.id || null,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
+        customerEmail: session?.user?.email || null,
         deliveryType,
         deliveryAddress:
           deliveryType === 'delivery'
@@ -157,11 +181,6 @@ export default function CartPage() {
           quantityType: i.quantityType,
           looseUnitCount: i.looseUnitCount || null,
           unitsPerPack: i.unitsPerPack,
-          unitPrice: i.quantityType === 'loose_units' ? i.price / i.unitsPerPack : i.price,
-          totalPrice:
-            i.quantityType === 'loose_units'
-              ? (i.price / i.unitsPerPack) * (i.looseUnitCount || 1)
-              : i.price * i.quantity,
         })),
       }
 
@@ -171,13 +190,17 @@ export default function CartPage() {
         body: JSON.stringify(orderPayload),
       })
 
+      const orderData = await res.json()
+
       if (res.ok) {
-        const orderData = await res.json()
+        if (orderData.whatsappDispatchUrl && typeof window !== 'undefined') {
+          sessionStorage.setItem('lastOrderWhatsapp', orderData.whatsappDispatchUrl)
+        }
         clearCart()
         toast.success('Order placed successfully! 🚀', { duration: 5000 })
         router.push(`/order/${orderData.id}`)
       } else {
-        toast.error('Failed to place order. Please try again.')
+        toast.error(orderData.error || 'Failed to place order. Please try again.')
       }
     } catch {
       toast.error('Network error. Please check your connection.')
@@ -205,7 +228,7 @@ export default function CartPage() {
 
           <div className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-2xl w-fit">
             <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            <span>60 Min Delivery in Ghaziabad</span>
+            <span>{queueStatus?.message || '60 Min Delivery in Ghaziabad'}</span>
           </div>
         </div>
 

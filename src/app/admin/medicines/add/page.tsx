@@ -108,6 +108,8 @@ export default function AddMedicinePage() {
               medicineId: createdMedicine.id,
               batchId: null,
               change: parseInt(initialQuantity),
+              batchNumber: batchNumber.trim() || undefined,
+              expiryDate: expiryDate || undefined,
               reason: 'Initial stock intake',
             }),
           }).catch(() => {})

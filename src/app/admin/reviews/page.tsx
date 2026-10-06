@@ -16,7 +16,7 @@ export default function AdminReviewsPage() {
 
   const fetchReviews = async () => {
     try {
-      const res = await fetch('/api/reviews')
+      const res = await fetch('/api/reviews?status=all')
       if (res.ok) {
         const data = await res.json()
         setReviews(data)

@@ -46,7 +46,7 @@ export default function HeroSection() {
             {/* Main Headline */}
             <h1 className="font-poppins font-extrabold text-3xl sm:text-4xl lg:text-5xl text-gray-900 leading-[1.15] tracking-tight">
               Your Trusted Medical Pharmacy{' '}
-              <span className="text-teal-600 block mt-1">Delivered in 15 Minutes</span>
+              <span className="text-teal-600 block mt-1">Delivered in 60 Minutes</span>
             </h1>
 
             {/* Authentic Hindi Tagline from Shop Board */}
@@ -55,7 +55,7 @@ export default function HeroSection() {
                 हमारे यहाँ सभी प्रकार की अंग्रेजी व देशी दवाईयाँ उचित रेट पर मिलती हैं
               </p>
               <p className="text-xs text-gray-500 font-medium mt-0.5">
-                Owner: <strong>Nishant Choudhary</strong> (7827558443) &amp; <strong>Honey Kashyap</strong> (8171093455)
+                Owner: <strong>Nishant Choudhary</strong> (7827558443) &amp; <strong>Harsh Kashyap</strong> (8171093455)
               </p>
             </div>
 
@@ -124,7 +124,7 @@ export default function HeroSection() {
                 </div>
                 <div className="flex items-center gap-2 text-teal-50">
                   <CheckCircle2 className="w-4 h-4 text-amber-300 shrink-0" />
-                  <span>Home delivered within 15-30 minutes</span>
+                  <span>Home delivered within 60 minutes</span>
                 </div>
               </div>
 
@@ -159,7 +159,7 @@ export default function HeroSection() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
           {[
             { icon: ShieldCheck, title: '100% Genuine Medicines', sub: 'Certified genuine batch' },
-            { icon: Zap, title: '15 Mins Superfast Delivery', sub: 'Ghookna Mode & Ghaziabad' },
+            { icon: Zap, title: '60 Mins Fast Home Delivery', sub: 'Ghookna Mode & Ghaziabad' },
             { icon: Award, title: 'Registered Pharmacist', sub: 'Doctor prescription verified' },
             { icon: Clock, title: 'Open 8:00 AM – 9:00 PM', sub: 'Mon–Sat fast support' },
           ].map((item, i) => (

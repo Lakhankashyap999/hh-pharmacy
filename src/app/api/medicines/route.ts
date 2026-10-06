@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/serverAuth'
 
 export async function GET(req: NextRequest) {
   try {
@@ -55,12 +56,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ medicines, total, page, pages: Math.ceil(total / limit) })
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Failed to fetch medicines' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const adminAuth = await requireAdmin()
+    if (!adminAuth.authorized) return adminAuth.response!
+
     const data = await req.json()
     const medicine = await prisma.medicine.create({
       data: {
