@@ -25,6 +25,7 @@ import {
 import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
 import { useSession, signIn } from 'next-auth/react'
+import { MedicinePackshot } from '@/components/customer/MedicinePackshot'
 
 interface Medicine {
   id: number
@@ -63,27 +64,15 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
   const { data: session } = useSession()
   const addToCart = useCartStore((s) => s.addItem)
 
-  // Multi-image slides
-  const images = [
-    {
-      url: medicine.imageUrl || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
-      label: 'Main Pack',
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=600&auto=format&fit=crop&q=80',
-      label: 'Blister Strip (Foil)',
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1576602976047-174e57a47881?w=600&auto=format&fit=crop&q=80',
-      label: 'Composition & Salt',
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=600&auto=format&fit=crop&q=80',
-      label: 'Packaging Details',
-    },
+  // Dynamic Pharmaceutical Showcase Views
+  const slides = [
+    { id: 'packshot', label: '3D Packshot', icon: '📦' },
+    { id: 'salt', label: 'Salt Formula', icon: '🧬' },
+    { id: 'schedule', label: 'Drug Schedule', icon: '⚖️' },
+    { id: 'storage', label: 'Storage & Dispensing', icon: '🏪' },
   ]
 
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
 
   // Mode: full pack vs loose unit
   const isStripOrPack = medicine.unitType === 'strip' && medicine.unitsPerPack > 1
@@ -209,61 +198,169 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
         {/* Left column: Image Carousel / Slider & Quick Badges (5 cols) */}
         <div className="lg:col-span-5 space-y-3 sm:space-y-4">
           {/* Main Slide Window with Glow */}
-          <div className="relative bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-xs flex items-center justify-center min-h-[260px] sm:min-h-[350px] glow-card glow-card-ambient overflow-hidden group">
+          <div className="relative bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-4 sm:p-6 shadow-xs flex items-center justify-center min-h-[280px] sm:min-h-[360px] glow-card glow-card-ambient overflow-hidden group">
             {medicine.discountPercent > 0 && (
-              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 bg-teal-600 text-white text-[10px] sm:text-xs font-extrabold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-2xs">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20 bg-teal-600 text-white text-[10px] sm:text-xs font-extrabold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full shadow-2xs">
                 {medicine.discountPercent}% DISCOUNT
               </div>
             )}
 
             {/* Prev/Next arrows */}
             <button
-              onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full border border-gray-200 shadow-md flex items-center justify-center text-gray-700 hover:bg-white z-10 cursor-pointer"
+              onClick={() => setCurrentSlideIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1))}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full border border-gray-200 shadow-md flex items-center justify-center text-gray-700 hover:bg-white z-20 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
 
             <button
-              onClick={() => setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full border border-gray-200 shadow-md flex items-center justify-center text-gray-700 hover:bg-white z-10 cursor-pointer"
+              onClick={() => setCurrentSlideIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1))}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 rounded-full border border-gray-200 shadow-md flex items-center justify-center text-gray-700 hover:bg-white z-20 cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
 
-            {/* Slide Image */}
+            {/* Slide Content */}
             <AnimatePresence mode="wait">
-              <motion.img
-                key={currentImageIndex}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                src={images[currentImageIndex].url}
-                alt={medicine.name}
-                className="max-h-64 max-w-full object-contain p-2"
-              />
+              {currentSlideIndex === 0 && (
+                <motion.div
+                  key="packshot"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full flex items-center justify-center"
+                >
+                  <MedicinePackshot
+                    name={medicine.name}
+                    brand={medicine.brand}
+                    genericName={medicine.genericName}
+                    unitType={medicine.unitType}
+                    unitsPerPack={medicine.unitsPerPack}
+                    drugSchedule={medicine.drugSchedule}
+                    categoryName={medicine.category?.name}
+                    categoryColor={medicine.category?.color}
+                    imageUrl={medicine.imageUrl}
+                    size="xl"
+                  />
+                </motion.div>
+              )}
+
+              {currentSlideIndex === 1 && (
+                <motion.div
+                  key="salt"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full max-w-sm bg-gradient-to-br from-teal-50 to-white border border-teal-200/80 rounded-2xl p-5 text-left space-y-3"
+                >
+                  <div className="flex items-center gap-2 text-teal-800">
+                    <span className="text-xl">🧬</span>
+                    <h4 className="font-poppins font-bold text-sm text-gray-900">Active Salt Composition</h4>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-teal-100 shadow-3xs space-y-1">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Generic Salt Molecule</p>
+                    <p className="font-mono font-bold text-sm text-teal-900">{medicine.genericName || medicine.name}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-100">
+                      <p className="text-[9px] text-gray-400 uppercase font-bold">Brand</p>
+                      <p className="font-bold text-gray-800">{medicine.brand || 'Standard'}</p>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-gray-100">
+                      <p className="text-[9px] text-gray-400 uppercase font-bold">Manufacturer</p>
+                      <p className="font-bold text-gray-800 truncate">{medicine.manufacturer || 'Licensed Indian Pharma'}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {currentSlideIndex === 2 && (
+                <motion.div
+                  key="schedule"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full max-w-sm bg-gradient-to-br from-red-50 to-white border border-red-200/80 rounded-2xl p-5 text-left space-y-3"
+                >
+                  <div className="flex items-center gap-2 text-red-800">
+                    <span className="text-xl">⚖️</span>
+                    <h4 className="font-poppins font-bold text-sm text-gray-900">Drug Law Classification</h4>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-red-100 shadow-3xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400 font-bold uppercase">Schedule Category</span>
+                      <span className="bg-red-100 text-red-800 text-[10px] font-black px-2 py-0.5 rounded-full">
+                        Schedule {medicine.drugSchedule}
+                      </span>
+                    </div>
+                    <p className="text-xs text-red-950 font-medium">
+                      {medicine.drugSchedule === 'OTC'
+                        ? 'Over The Counter: No doctor prescription required by Indian Law.'
+                        : 'Doctor Prescription strictly required. Dispensed under qualified pharmacist supervision.'}
+                    </p>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-gray-100 text-[11px] text-gray-600">
+                    <p>🏪 <strong>Retail DL:</strong> RLF20UP2025007813 / RLF21UP2025007766</p>
+                    <p>👨‍⚕️ <strong>Pharmacist:</strong> Mr. Ashwani Kumar (B.Pharma)</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {currentSlideIndex === 3 && (
+                <motion.div
+                  key="storage"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.96 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full max-w-sm bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-2xl p-5 text-left space-y-3"
+                >
+                  <div className="flex items-center gap-2 text-teal-800">
+                    <span className="text-xl">🏪</span>
+                    <h4 className="font-poppins font-bold text-sm text-gray-900">Packaging &amp; Storage</h4>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-3xs space-y-1 text-xs">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase">Retail Unit Packing</p>
+                    <p className="font-bold text-gray-900">
+                      {medicine.unitsPerPack} {medicine.unitType === 'strip' ? 'Tablets / Strip' : `${medicine.unitType}s`}
+                    </p>
+                    <p className="text-teal-700 font-semibold pt-1">
+                      ✅ Loose tablets available on request at counter
+                    </p>
+                  </div>
+                  <div className="bg-amber-50 p-2.5 rounded-xl border border-amber-200/60 text-[11px] text-amber-900">
+                    <p className="font-bold">🌡️ Storage Instructions:</p>
+                    <p>Store in a cool, dry place below 25°C. Keep protected from moisture and direct sunlight.</p>
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* Slide Label Pill */}
-            <span className="absolute bottom-3 right-4 text-[10px] font-bold bg-gray-900/70 text-white px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-              {images[currentImageIndex].label} ({currentImageIndex + 1}/{images.length})
+            <span className="absolute bottom-3 right-4 text-[10px] font-bold bg-gray-900/80 text-white px-2.5 py-0.5 rounded-full backdrop-blur-xs z-20">
+              {slides[currentSlideIndex].label} ({currentSlideIndex + 1}/{slides.length})
             </span>
           </div>
 
-          {/* Thumbnail Strip */}
+          {/* Interactive Navigation Thumbnail Tabs */}
           <div className="grid grid-cols-4 gap-2">
-            {images.map((img, idx) => (
+            {slides.map((s, idx) => (
               <button
-                key={idx}
-                onClick={() => setCurrentImageIndex(idx)}
-                className={`p-1 rounded-2xl border-2 transition-all bg-white overflow-hidden h-16 flex items-center justify-center cursor-pointer ${
-                  currentImageIndex === idx
-                    ? 'border-teal-600 ring-2 ring-teal-100'
-                    : 'border-gray-200 hover:border-gray-300 opacity-70'
+                key={s.id}
+                onClick={() => setCurrentSlideIndex(idx)}
+                className={`p-2 rounded-2xl border-2 transition-all bg-white text-center flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                  currentSlideIndex === idx
+                    ? 'border-teal-600 bg-teal-50/50 shadow-xs ring-2 ring-teal-100'
+                    : 'border-gray-200 hover:border-gray-300 opacity-80'
                 }`}
               >
-                <img src={img.url} alt="" className="h-full w-full object-contain" />
+                <span className="text-base">{s.icon}</span>
+                <span className="text-[10px] font-bold text-gray-800 leading-tight truncate w-full">
+                  {s.label}
+                </span>
               </button>
             ))}
           </div>

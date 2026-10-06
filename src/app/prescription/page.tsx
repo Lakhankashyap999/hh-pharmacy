@@ -26,6 +26,7 @@ import Header from '@/components/customer/Header'
 import Footer from '@/components/customer/Footer'
 import { useCartStore } from '@/store/cartStore'
 import { fileToCompressedDataUrl } from '@/lib/imageCompress'
+import { MedicinePackshot } from '@/components/customer/MedicinePackshot'
 
 type Suggested = { quantityType: 'full_pack' | 'loose_units'; quantity: number; looseUnitCount?: number }
 
@@ -457,12 +458,16 @@ export default function PrescriptionPage() {
                                     active ? 'border-teal-600 bg-teal-600' : 'border-gray-300'
                                   }`}
                                 />
-                                <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-                                  {opt.imageUrl ? (
-                                    <img src={opt.imageUrl} alt="" className="w-full h-full object-contain p-0.5" />
-                                  ) : (
-                                    <span>💊</span>
-                                  )}
+                                <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-gray-100">
+                                  <MedicinePackshot
+                                    name={opt.name}
+                                    brand={opt.brand}
+                                    genericName={opt.genericName}
+                                    unitType={opt.unitType}
+                                    unitsPerPack={opt.unitsPerPack}
+                                    imageUrl={opt.imageUrl}
+                                    size="xs"
+                                  />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p className="text-xs font-bold text-gray-900 leading-tight">{opt.name}</p>

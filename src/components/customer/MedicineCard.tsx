@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ShoppingCart, Star, AlertCircle, CheckCircle, XCircle, FileText, Plus, Minus, Zap } from 'lucide-react'
 import { useCartStore } from '@/store/cartStore'
 import toast from 'react-hot-toast'
+import { MedicinePackshot } from '@/components/customer/MedicinePackshot'
 
 interface Medicine {
   id: number
@@ -124,28 +125,25 @@ export function MedicineCard({ medicine, index = 0 }: { medicine: Medicine; inde
             </div>
           )}
 
-          {/* Image Canvas - compact on mobile, sleek on desktop */}
+          {/* Image Canvas - 3D Digital Pharma Packshot with custom image fallback */}
           <div className="h-24 sm:h-32 bg-gradient-to-b from-gray-50/80 to-white rounded-xl sm:rounded-2xl flex items-center justify-center relative overflow-hidden mb-1.5 sm:mb-2 group-hover:scale-102 transition-transform">
-            {medicine.imageUrl ? (
-              <img
-                src={medicine.imageUrl}
-                alt={medicine.name}
-                className="h-full w-full object-contain p-1.5 sm:p-2"
-                loading="lazy"
-              />
-            ) : (
-              <div className="text-center">
-                <span className="text-3xl sm:text-4xl block mb-0.5">💊</span>
-                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">
-                  {medicine.unitType}
-                </span>
-              </div>
-            )}
+            <MedicinePackshot
+              name={medicine.name}
+              brand={medicine.brand}
+              genericName={medicine.genericName}
+              unitType={medicine.unitType}
+              unitsPerPack={medicine.unitsPerPack}
+              drugSchedule={medicine.drugSchedule}
+              categoryName={medicine.category?.name}
+              categoryColor={medicine.category?.color}
+              imageUrl={medicine.imageUrl}
+              size="sm"
+            />
 
             {/* Category tag */}
             {medicine.category && (
               <span
-                className="absolute bottom-1 left-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-md text-white shadow-3xs max-w-[85%] truncate"
+                className="absolute bottom-1 left-1 text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-md text-white shadow-3xs max-w-[85%] truncate pointer-events-none z-10"
                 style={{ backgroundColor: medicine.category.color || '#0d9488' }}
               >
                 {medicine.category.name}

@@ -31,6 +31,7 @@ import Header from '@/components/customer/Header'
 import Footer from '@/components/customer/Footer'
 import toast from 'react-hot-toast'
 import { fileToCompressedDataUrl } from '@/lib/imageCompress'
+import { MedicinePackshot } from '@/components/customer/MedicinePackshot'
 
 // Serviceable Ghaziabad delivery pincodes & keywords
 const SERVICEABLE_PINCODES = ['201001', '201002', '201003', '201004', '201005', '201009', '201017']
@@ -291,12 +292,15 @@ export default function CartPage() {
                       <div key={item.id} className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         {/* Medicine info */}
                         <div className="flex items-start gap-3">
-                          <div className="w-12 h-12 bg-teal-50 rounded-2xl flex items-center justify-center text-xl shrink-0 overflow-hidden">
-                            {item.imageUrl ? (
-                              <img src={item.imageUrl} alt="" className="w-full h-full object-contain p-1" />
-                            ) : (
-                              '💊'
-                            )}
+                          <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border border-gray-100">
+                            <MedicinePackshot
+                              name={item.name}
+                              brand={item.brand}
+                              unitType={item.unitType}
+                              unitsPerPack={item.unitsPerPack}
+                              imageUrl={item.imageUrl}
+                              size="xs"
+                            />
                           </div>
                           <div>
                             <Link href={`/medicines/${item.id}`} className="font-bold text-xs sm:text-sm text-gray-900 hover:text-teal-600 transition-colors">
