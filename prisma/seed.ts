@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({
+  datasources: { db: { url: process.env.DIRECT_URL } },
+})
 
 async function main() {
   console.log('🌱 Seeding Comprehensive H&H Pharmacy master database...')
