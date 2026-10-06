@@ -60,6 +60,7 @@ export default function CartPage() {
     removeItem,
     updateQuantity,
     updateLooseUnits,
+    toggleQuantityType,
     clearCart,
     total,
     hasPrescriptionRequired,
@@ -312,10 +313,33 @@ export default function CartPage() {
                                 📋 Rx Required
                               </span>
                             )}
-                            {/* Loose unit badge */}
+                            {/* Mode Toggle Button for strip items */}
+                            {(item.unitType === 'strip' || item.unitsPerPack > 1) && (
+                              <div className="pt-1.5 flex flex-wrap items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleQuantityType(item.id)}
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-colors cursor-pointer ${
+                                    isLoose
+                                      ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200'
+                                      : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  {isLoose ? '✂️ Khuli Goli (Loose Tablets)' : '📦 Poora Patta (Full Strip)'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleQuantityType(item.id)}
+                                  className="text-[10px] text-teal-700 underline font-semibold hover:text-teal-900 cursor-pointer"
+                                >
+                                  {isLoose ? 'Switch to Full Strip' : 'Sirf 3-4 goli chahiye? Switch'}
+                                </button>
+                              </div>
+                            )}
+
                             {isLoose && (
-                              <p className="text-[11px] text-teal-800 font-bold mt-1">
-                                Loose Purchase: {item.looseUnitCount} tablets @ ₹{unitPrice.toFixed(1)}/each
+                              <p className="text-[10px] text-amber-800 font-semibold mt-1">
+                                Rate: ₹{unitPrice.toFixed(1)} / tablet (Total {item.looseUnitCount} Tablets)
                               </p>
                             )}
                           </div>
@@ -342,10 +366,51 @@ export default function CartPage() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 bg-teal-50 border border-teal-200 rounded-2xl px-2.5 py-1">
-                              <span className="text-xs text-teal-800 font-bold">
-                                {item.looseUnitCount} Tablets
-                              </span>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-300 rounded-2xl px-2 py-1">
+                                <button
+                                  type="button"
+                                  onClick={() => updateLooseUnits(item.id, (item.looseUnitCount || 1) - 1)}
+                                  className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer shadow-3xs"
+                                  title="1 tablet kam karein"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <div className="text-center min-w-[50px]">
+                                  <span className="text-xs font-black text-amber-950 block leading-tight">
+                                    {item.looseUnitCount}
+                                  </span>
+                                  <span className="text-[8px] font-bold text-amber-700 uppercase leading-none block">
+                                    Tablets
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => updateLooseUnits(item.id, (item.looseUnitCount || 1) + 1)}
+                                  className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer shadow-3xs"
+                                  title="1 tablet badhayein"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {/* Quick chips */}
+                              <div className="flex items-center gap-1 justify-end">
+                                {[2, 4, 6, 10].map((num) => (
+                                  <button
+                                    key={num}
+                                    type="button"
+                                    onClick={() => updateLooseUnits(item.id, num)}
+                                    className={`text-[9px] font-bold px-1.5 py-0.2 rounded border transition-colors cursor-pointer ${
+                                      item.looseUnitCount === num
+                                        ? 'bg-amber-600 text-white border-amber-600'
+                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-100'
+                                    }`}
+                                  >
+                                    {num}T
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           )}
 

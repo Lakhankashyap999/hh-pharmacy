@@ -523,44 +523,94 @@ export default function MedicineDetailClient({ medicine }: { medicine: Medicine 
               </div>
 
               {/* Quantity Counter */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <span className="text-xs text-gray-600 font-semibold">
-                  {buyMode === 'full_pack' ? 'Number of Strips:' : 'Number of Tablets required:'}
-                </span>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (buyMode === 'full_pack') {
-                        setPackQuantity((q) => Math.max(1, q - 1))
-                      } else {
-                        setLooseUnits((u) => Math.max(1, u - 1))
-                      }
-                    }}
-                    className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-
-                  <span className="font-bold text-sm text-gray-900 w-8 text-center">
-                    {buyMode === 'full_pack' ? packQuantity : looseUnits}
+              <div className="pt-2 border-t border-gray-100 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-700 font-semibold">
+                    {buyMode === 'full_pack' ? 'Number of Strips:' : 'Number of Tablets required:'}
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (buyMode === 'full_pack') {
-                        setPackQuantity((q) => q + 1)
-                      } else {
-                        setLooseUnits((u) => Math.min(medicine.unitsPerPack, u + 1))
-                      }
-                    }}
-                    className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (buyMode === 'full_pack') {
+                          setPackQuantity((q) => Math.max(1, q - 1))
+                        } else {
+                          setLooseUnits((u) => Math.max(1, u - 1))
+                        }
+                      }}
+                      className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer shadow-3xs"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+
+                    {buyMode === 'full_pack' ? (
+                      <span className="font-bold text-sm text-gray-900 w-10 text-center">
+                        {packQuantity}
+                      </span>
+                    ) : (
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          min="1"
+                          max={medicine.unitsPerPack}
+                          value={looseUnits}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value)
+                            if (!isNaN(val) && val >= 1) {
+                              setLooseUnits(Math.min(medicine.unitsPerPack, val))
+                            }
+                          }}
+                          className="w-12 text-center font-bold text-sm text-gray-900 border border-gray-200 rounded-lg py-1 focus:outline-none focus:border-teal-500 font-mono"
+                        />
+                        <span className="text-[10px] text-gray-500 ml-1 font-semibold">tabs</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (buyMode === 'full_pack') {
+                          setPackQuantity((q) => q + 1)
+                        } else {
+                          setLooseUnits((u) => Math.min(medicine.unitsPerPack, u + 1))
+                        }
+                      }}
+                      className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 cursor-pointer shadow-3xs"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Quick Chips for loose units */}
+                {buyMode === 'loose_units' && (
+                  <div className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-bold text-amber-950">Quick Select Tablets:</span>
+                      <span className="text-amber-800 font-medium">Doctor Dose Shortcuts</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[1, 2, 3, 4, 5, 6, 8, 10].filter((n) => n <= medicine.unitsPerPack).map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          onClick={() => setLooseUnits(count)}
+                          className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                            looseUnits === count
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-2xs'
+                              : 'bg-white text-gray-700 border-gray-200 hover:bg-amber-100 hover:border-amber-300'
+                          }`}
+                        >
+                          {count} {count === 1 ? 'Goli' : 'Goliyaan'}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-amber-800 pt-0.5">
+                      💡 Jitni dawai ki zaroorat ho sirf utni hi lo — pure patte ke paise mat do!
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

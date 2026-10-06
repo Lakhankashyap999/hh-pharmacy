@@ -209,11 +209,15 @@ export function MedicineCard({ medicine, index = 0 }: { medicine: Medicine; inde
                   </span>
                 )}
               </div>
-              {savings > 0 && (
+              {medicine.unitType === 'strip' && medicine.unitsPerPack > 1 ? (
+                <span className="text-[8px] sm:text-[9px] text-amber-800 font-bold block leading-none truncate mt-0.5" title="Loose tablets available">
+                  ✂️ ₹{(medicine.sellingPrice / medicine.unitsPerPack).toFixed(1)}/tab (Khuli Goli)
+                </span>
+              ) : savings > 0 ? (
                 <span className="text-[8px] sm:text-[9px] text-emerald-600 font-bold block leading-none truncate">
                   Save ₹{savings.toFixed(0)}
                 </span>
-              )}
+              ) : null}
             </div>
 
             {/* Interactive Add / Counter Button */}

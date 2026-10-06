@@ -231,11 +231,22 @@ export default function AdminOrdersPage() {
                 {/* Order Items Pills */}
                 <div className="bg-gray-50/70 p-3 rounded-2xl flex flex-wrap gap-2 text-xs">
                   {order.items.map((item: any) => (
-                    <span key={item.id} className="bg-white border border-gray-200 px-2.5 py-1 rounded-lg">
+                    <span
+                      key={item.id}
+                      className={`px-3 py-1.5 rounded-xl border text-xs ${
+                        item.quantityType === 'loose_units'
+                          ? 'bg-amber-50 border-amber-300 text-amber-950 font-bold shadow-3xs'
+                          : 'bg-white border-gray-200 text-gray-800'
+                      }`}
+                    >
                       <strong>{item.medicine.name}</strong> •{' '}
-                      {item.quantityType === 'loose_units'
-                        ? `${item.looseUnitCount} tablets`
-                        : `${item.quantity} strip(s)`}{' '}
+                      {item.quantityType === 'loose_units' ? (
+                        <span className="text-amber-800 bg-amber-200/60 px-1.5 py-0.5 rounded font-black">
+                          ✂️ CUT STRIP: {item.looseUnitCount} TABLETS ONLY
+                        </span>
+                      ) : (
+                        `${item.quantity} Strip(s)`
+                      )}{' '}
                       (₹{item.totalPrice})
                     </span>
                   ))}
